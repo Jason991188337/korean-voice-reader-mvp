@@ -12,7 +12,13 @@ export function cleanKoreanText(input = '') {
 export function getKoreanVoices(voices = []) {
   return voices
     .map((voice, index) => ({ voice, index }))
-    .filter(({ voice }) => String(voice.lang || '').toLowerCase().replace('_', '-').startsWith('ko'))
+    .filter(({ voice }) => {
+      const lang = String(voice.lang || '').toLowerCase().replace('_', '-');
+      const name = String(voice.name || '').toLowerCase();
+      const isKorean = lang.startsWith('ko');
+      const isPreferredVoice = name.includes('yuna') || name.includes('google');
+      return isKorean && isPreferredVoice;
+    })
     .map(({ voice, index }) => {
       const name = voice.name || `Korean Voice ${index}`;
       const lang = voice.lang || 'ko-KR';
@@ -41,4 +47,50 @@ export function buildSpeechUtteranceConfig({ text, rate = 1, pitch = 1, voiceInd
     pitch: clampNumber(pitch, 0, 2, 1),
     voiceIndex: Number.isInteger(parsedVoiceIndex) ? parsedVoiceIndex : null,
   };
+}
+
+function splitTextIntoChunks(text, maxChars) {
+  const normalized = cleanKoreanText(text);
+  if (!normalized) return [];
+
+  const sentences = normalized.match(/[^.!?。！？]+[.!?。！？]?/g) || [normalized];
+  const chunks = [];
+  let current = '';
+
+  for (const sentence of sentences.map((item) => item.trim()).filter(Boolean)) {
+    if ((current + ' ' + sentence).trim().length <= maxChars) {
+      current = (current + ' ' + sentence).trim();
+      continue;
+    }
+    if (current) chunks.push(current);
+
+    if (sentence.length <= maxChars) {
+      current = sentence;
+    } else {
+      for (let i = 0; i < sentence.length; i += maxChars) {
+        chunks.push(sentence.slice(i, i + maxChars));
+      }
+      current = '';
+    }
+  }
+
+  if (current) chunks.push(current);
+  return chunks;
+}
+
+export function buildGoogleTtsMp3Links(text, { maxChars = 180 } = {}) {
+  return splitTextIntoChunks(text, maxChars).map((chunk, index) => {
+    const params = new URLSearchParams({
+      ie: 'UTF-8',
+      q: chunk,
+      tl: 'ko',
+      client: 'tw-ob',
+    });
+
+    return {
+      text: chunk,
+      filename: `korean-voice-part-${index + 1}.mp3`,
+      url: `https://translate.google.com/translate_tts?${params.toString()}`,
+    };
+  });
 }

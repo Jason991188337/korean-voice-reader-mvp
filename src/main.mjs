@@ -1,4 +1,4 @@
-import { cleanKoreanText, getKoreanVoices, buildSpeechUtteranceConfig } from './app-logic.mjs';
+import { cleanKoreanText, getKoreanVoices, buildSpeechUtteranceConfig, buildGoogleTtsMp3Links } from './app-logic.mjs';
 
 const $ = (id) => document.getElementById(id);
 
@@ -16,6 +16,8 @@ const pitchValue = $('pitchValue');
 const speakButton = $('speakButton');
 const pauseButton = $('pauseButton');
 const stopButton = $('stopButton');
+const mp3Button = $('mp3Button');
+const downloadLinks = $('downloadLinks');
 
 let allVoices = [];
 let isPaused = false;
@@ -36,9 +38,12 @@ function refreshVoices() {
   }
 
   if (koreanVoices.length === 0) {
-    voiceSelect.append(new Option('기본 한국어 설정 사용 — ko-KR', ''));
+    voiceSelect.append(new Option('Yuna 또는 Google 한국어 음성이 없습니다', ''));
+    speakButton.disabled = true;
     return;
   }
+
+  speakButton.disabled = false;
 
   for (const voice of koreanVoices) {
     voiceSelect.append(new Option(voice.label, String(voice.index)));
@@ -138,6 +143,35 @@ function stop() {
   setStatus('중지됨.');
 }
 
+function renderMp3Links() {
+  const links = buildGoogleTtsMp3Links(textInput.value);
+  downloadLinks.innerHTML = '';
+
+  if (links.length === 0) {
+    setStatus('MP3로 만들 문장을 먼저 입력해주세요.');
+    return;
+  }
+
+  const note = document.createElement('p');
+  note.className = 'note';
+  note.textContent = links.length === 1
+    ? '아래 링크를 열어 MP3를 저장하세요. 브라우저에 따라 새 탭에서 열린 뒤 저장해야 할 수 있습니다.'
+    : '문장이 길어서 여러 개의 MP3 링크로 나눴습니다. 각 part를 저장하세요.';
+  downloadLinks.append(note);
+
+  for (const link of links) {
+    const anchor = document.createElement('a');
+    anchor.href = link.url;
+    anchor.download = link.filename;
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+    anchor.textContent = `${link.filename} 다운로드/열기`;
+    downloadLinks.append(anchor);
+  }
+
+  setStatus(`MP3 링크 ${links.length}개를 만들었습니다.`);
+}
+
 ocrButton.addEventListener('click', runOcr);
 cleanButton.addEventListener('click', () => {
   textInput.value = cleanKoreanText(textInput.value);
@@ -149,6 +183,7 @@ sampleButton.addEventListener('click', () => {
 speakButton.addEventListener('click', speak);
 pauseButton.addEventListener('click', pauseOrResume);
 stopButton.addEventListener('click', stop);
+mp3Button.addEventListener('click', renderMp3Links);
 rateInput.addEventListener('input', () => { rateValue.value = Number(rateInput.value).toFixed(1); });
 pitchInput.addEventListener('input', () => { pitchValue.value = Number(pitchInput.value).toFixed(1); });
 
