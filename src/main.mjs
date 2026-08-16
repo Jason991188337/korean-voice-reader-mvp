@@ -32,13 +32,13 @@ function refreshVoices() {
   voiceSelect.innerHTML = '';
 
   if (!('speechSynthesis' in window)) {
-    voiceSelect.append(new Option('이 브라우저는 음성 읽기를 지원하지 않습니다', ''));
+    voiceSelect.append(new Option('This browser does not support speech playback', ''));
     speakButton.disabled = true;
     return;
   }
 
   if (koreanVoices.length === 0) {
-    voiceSelect.append(new Option('Yuna 또는 Google 한국어 음성이 없습니다', ''));
+    voiceSelect.append(new Option('No Yuna or Google Korean voice is available', ''));
     speakButton.disabled = true;
     return;
   }
@@ -53,16 +53,16 @@ function refreshVoices() {
 async function runOcr() {
   const file = imageInput.files?.[0];
   if (!file) {
-    setStatus('먼저 이미지를 선택해주세요.');
+    setStatus('Please choose an image first.');
     return;
   }
   if (!window.Tesseract) {
-    setStatus('OCR 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해주세요.');
+    setStatus('The OCR library could not be loaded. Please check your internet connection.');
     return;
   }
 
   ocrButton.disabled = true;
-  setStatus('OCR 준비 중... 첫 실행은 언어 데이터를 받느라 조금 걸릴 수 있습니다.');
+  setStatus('Preparing OCR... The first run may take a little while while language data downloads.');
 
   try {
     const result = await window.Tesseract.recognize(file, 'kor+eng', {
@@ -75,10 +75,10 @@ async function runOcr() {
     });
     const cleaned = cleanKoreanText(result.data.text);
     textInput.value = cleaned;
-    setStatus(cleaned ? 'OCR 완료. 결과를 확인한 뒤 읽기를 눌러주세요.' : '문자를 찾지 못했습니다. 더 선명한 사진을 사용해보세요.');
+    setStatus(cleaned ? 'OCR complete. Review the result, then press Speak.' : 'No text was found. Try a clearer image.');
   } catch (error) {
     console.error(error);
-    setStatus(`OCR 실패: ${error.message || error}`);
+    setStatus(`OCR failed: ${error.message || error}`);
   } finally {
     ocrButton.disabled = false;
   }
@@ -86,7 +86,7 @@ async function runOcr() {
 
 function speak() {
   if (!('speechSynthesis' in window)) {
-    setStatus('이 브라우저는 음성 읽기를 지원하지 않습니다.');
+    setStatus('This browser does not support speech playback.');
     return;
   }
 
@@ -98,7 +98,7 @@ function speak() {
   });
 
   if (!config.text) {
-    setStatus('읽을 문장을 먼저 입력해주세요.');
+    setStatus('Please enter text to read first.');
     return;
   }
 
@@ -112,12 +112,12 @@ function speak() {
     utterance.voice = allVoices[config.voiceIndex];
   }
 
-  utterance.onstart = () => setStatus('음성 재생 중...');
+  utterance.onstart = () => setStatus('Playing speech...');
   utterance.onend = () => {
     isPaused = false;
-    setStatus('재생 완료.');
+    setStatus('Playback complete.');
   };
-  utterance.onerror = (event) => setStatus(`음성 재생 오류: ${event.error || '알 수 없는 오류'}`);
+  utterance.onerror = (event) => setStatus(`Speech playback error: ${event.error || 'unknown error'}`);
 
   isPaused = false;
   window.speechSynthesis.speak(utterance);
@@ -128,11 +128,11 @@ function pauseOrResume() {
   if (window.speechSynthesis.speaking && !isPaused) {
     window.speechSynthesis.pause();
     isPaused = true;
-    setStatus('일시정지됨.');
+    setStatus('Paused.');
   } else if (isPaused) {
     window.speechSynthesis.resume();
     isPaused = false;
-    setStatus('다시 재생 중...');
+    setStatus('Resumed playback.');
   }
 }
 
@@ -140,7 +140,7 @@ function stop() {
   if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
   isPaused = false;
-  setStatus('중지됨.');
+  setStatus('Stopped.');
 }
 
 function renderMp3Links() {
@@ -148,15 +148,15 @@ function renderMp3Links() {
   downloadLinks.innerHTML = '';
 
   if (links.length === 0) {
-    setStatus('MP3로 만들 문장을 먼저 입력해주세요.');
+    setStatus('Please enter text before creating an MP3 link.');
     return;
   }
 
   const note = document.createElement('p');
   note.className = 'note';
   note.textContent = links.length === 1
-    ? '아래 링크를 열어 MP3를 저장하세요. 브라우저에 따라 새 탭에서 열린 뒤 저장해야 할 수 있습니다.'
-    : '문장이 길어서 여러 개의 MP3 링크로 나눴습니다. 각 part를 저장하세요.';
+    ? 'Open the link below to save the MP3. Depending on your browser, it may open in a new tab first.'
+    : 'The text is long, so it was split into multiple MP3 links. Save each part.';
   downloadLinks.append(note);
 
   for (const link of links) {
@@ -165,20 +165,20 @@ function renderMp3Links() {
     anchor.download = link.filename;
     anchor.target = '_blank';
     anchor.rel = 'noopener noreferrer';
-    anchor.textContent = `${link.filename} 다운로드/열기`;
+    anchor.textContent = `Download/open ${link.filename}`;
     downloadLinks.append(anchor);
   }
 
-  setStatus(`MP3 링크 ${links.length}개를 만들었습니다.`);
+  setStatus(`Created ${links.length} MP3 link${links.length === 1 ? '' : 's'}.`);
 }
 
 ocrButton.addEventListener('click', runOcr);
 cleanButton.addEventListener('click', () => {
   textInput.value = cleanKoreanText(textInput.value);
-  setStatus('문장을 정리했습니다.');
+  setStatus('Text cleaned.');
 });
 sampleButton.addEventListener('click', () => {
-  textInput.value = '안녕하세요. 이 페이지는 한글 문장을 한국어 음성으로 읽어주는 무료 MVP입니다.';
+  textInput.value = '안녕하세요. This free MVP reads Korean text aloud and can create an MP3 link.';
 });
 speakButton.addEventListener('click', speak);
 pauseButton.addEventListener('click', pauseOrResume);

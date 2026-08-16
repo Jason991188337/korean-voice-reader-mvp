@@ -10,62 +10,63 @@
     <main class="shell">
       <section class="hero">
         <p class="eyebrow">Free static MVP</p>
-        <h1>한글 사진/문장을 한국어 음성으로 읽기</h1>
+        <h1>Read Korean Text and Images Aloud</h1>
         <p>
-          이미지는 브라우저에서 OCR로 읽고, 문장은 기기 내장 한국어 음성으로 재생합니다.
-          서버·API 키·백그라운드 PC 실행 없이 동작하는 MVP입니다.
+          Upload a Korean text image or type Korean text directly. OCR runs in the browser,
+          and speech playback uses the device's built-in Korean voices. No server, API key,
+          or always-on background computer is required.
         </p>
       </section>
 
       <section class="card">
-        <h2>1. 한글 입력</h2>
+        <h2>1. Korean Input</h2>
         <label class="file-drop" for="imageInput">
-          <span>한글이 들어간 사진 업로드</span>
+          <span>Upload an image containing Korean text</span>
           <input id="imageInput" type="file" accept="image/*" />
         </label>
-        <button id="ocrButton" type="button">사진에서 한글 추출</button>
-        <p id="ocrStatus" class="status">사진을 선택하거나 아래에 직접 입력하세요.</p>
+        <button id="ocrButton" type="button">Extract Korean Text from Image</button>
+        <p id="ocrStatus" class="status">Choose an image or type Korean text below.</p>
 
-        <label for="textInput">읽을 문장</label>
-        <textarea id="textInput" rows="9" placeholder="여기에 한글 문장을 직접 입력하거나 OCR 결과를 수정하세요."></textarea>
+        <label for="textInput">Text to read</label>
+        <textarea id="textInput" rows="9" placeholder="Type Korean text here, or edit the OCR result before reading."></textarea>
         <div class="inline-actions">
-          <button id="cleanButton" type="button">문장 정리</button>
-          <button id="sampleButton" type="button">샘플 넣기</button>
+          <button id="cleanButton" type="button">Clean Text</button>
+          <button id="sampleButton" type="button">Insert Sample</button>
         </div>
       </section>
 
       <section class="card">
-        <h2>2. 음성 선택</h2>
-        <label for="voiceSelect">한국어 음성</label>
+        <h2>2. Voice Selection</h2>
+        <label for="voiceSelect">Korean voice</label>
         <select id="voiceSelect"></select>
-        <p class="hint">목록에는 브라우저/OS가 제공하는 한국어 음성 중 Yuna 또는 Google 음성만 표시합니다.</p>
+        <p class="hint">Only Yuna or Google Korean voices provided by the browser/OS are shown.</p>
 
         <div class="controls">
           <label>
-            속도 <output id="rateValue">1.0</output>
+            Speed <output id="rateValue">1.0</output>
             <input id="rateInput" type="range" min="0.5" max="2" step="0.1" value="1" />
           </label>
           <label>
-            높낮이 <output id="pitchValue">1.0</output>
+            Pitch <output id="pitchValue">1.0</output>
             <input id="pitchInput" type="range" min="0" max="2" step="0.1" value="1" />
           </label>
         </div>
 
         <div class="player-actions">
-          <button id="speakButton" type="button">읽기</button>
-          <button id="pauseButton" type="button">일시정지/이어듣기</button>
-          <button id="stopButton" type="button">중지</button>
-          <button id="mp3Button" type="button">Google MP3 다운로드 링크 만들기</button>
+          <button id="speakButton" type="button">Speak</button>
+          <button id="pauseButton" type="button">Pause / Resume</button>
+          <button id="stopButton" type="button">Stop</button>
+          <button id="mp3Button" type="button">Create Google MP3 Download Link</button>
         </div>
         <div id="downloadLinks" class="download-links" aria-live="polite"></div>
       </section>
 
       <section class="card muted">
-        <h2>무료 배포 방식</h2>
+        <h2>Free Deployment</h2>
         <ul>
-          <li>GitHub Pages, Cloudflare Pages, Netlify, Vercel 무료 플랜에 그대로 배포 가능합니다.</li>
-          <li>Tesseract.js는 CDN에서 불러오며 OCR은 사용자 브라우저에서 실행됩니다.</li>
-          <li>Web Speech API를 사용하므로 별도 TTS 서버 비용이 없습니다.</li>
+          <li>Deploy as-is on free plans such as GitHub Pages, Cloudflare Pages, Netlify, or Vercel.</li>
+          <li>Tesseract.js is loaded from a CDN, and OCR runs in the user's browser.</li>
+          <li>The Web Speech API handles playback, so no separate TTS server is required.</li>
         </ul>
       </section>
     </main>
