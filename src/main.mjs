@@ -6,7 +6,7 @@ import {
   estimateSpeechDurationMs,
   calculatePlaybackProgress,
   getTextFromProgress,
-} from './app-logic.mjs';
+} from './app-logic.mjs?v=20260817-voice-fallback-seek';
 
 const $ = (id) => document.getElementById(id);
 
