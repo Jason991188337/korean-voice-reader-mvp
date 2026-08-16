@@ -9,34 +9,14 @@ export function cleanKoreanText(input = '') {
     .trim();
 }
 
-const RECOMMENDED_KOREAN_VOICE_RANKS = [
-  'yuna',
-  'google',
-  'flo',
-  'shelley',
-  'sandy',
-  'grandma',
-  'grandpa',
-  'eddy',
-  'reed',
-  'rocko',
-];
-
-function recommendedVoiceRank(name) {
-  const normalized = String(name || '').toLowerCase();
-  const rank = RECOMMENDED_KOREAN_VOICE_RANKS.findIndex((keyword) => normalized.includes(keyword));
-  return rank === -1 ? Number.POSITIVE_INFINITY : rank;
-}
-
 export function getKoreanVoices(voices = []) {
   return voices
-    .map((voice, index) => ({ voice, index, rank: recommendedVoiceRank(voice.name) }))
-    .filter(({ voice, rank }) => {
+    .map((voice, index) => ({ voice, index }))
+    .filter(({ voice }) => {
       const lang = String(voice.lang || '').toLowerCase().replace('_', '-');
-      return lang.startsWith('ko') && Number.isFinite(rank);
+      const name = String(voice.name || '').toLowerCase();
+      return lang.startsWith('ko') && (name.includes('yuna') || name.includes('google'));
     })
-    .sort((a, b) => a.rank - b.rank || a.index - b.index)
-    .slice(0, 10)
     .map(({ voice, index }) => {
       const name = voice.name || `Korean Voice ${index}`;
       const lang = voice.lang || 'ko-KR';

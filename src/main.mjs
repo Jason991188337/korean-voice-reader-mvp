@@ -110,7 +110,7 @@ function refreshVoices() {
   }
 
   if (koreanVoices.length === 0) {
-    voiceSelect.append(new Option('No recommended Korean voice is available on this browser', ''));
+    voiceSelect.append(new Option('No Yuna or Google Korean voice is available on this browser', ''));
     speakButton.disabled = true;
     return;
   }

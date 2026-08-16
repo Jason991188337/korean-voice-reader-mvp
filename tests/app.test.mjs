@@ -15,34 +15,20 @@ test('cleanKoreanText normalizes OCR whitespace while preserving Korean punctuat
   assert.equal(cleanKoreanText(raw), '안녕하세요 세계! 오늘은 좋은 날입니다.');
 });
 
-test('getKoreanVoices keeps up to 10 recommended Korean voices in ranked order', () => {
+test('getKoreanVoices only keeps Yuna and Google Korean voices', () => {
   const voices = [
     { name: 'Alex', lang: 'en-US' },
     { name: 'Eddy (Korean (South Korea))', lang: 'ko-KR' },
     { name: 'Flo (Korean (South Korea))', lang: 'ko-KR' },
-    { name: 'Grandma (Korean (South Korea))', lang: 'ko-KR' },
-    { name: 'Grandpa (Korean (South Korea))', lang: 'ko-KR' },
-    { name: 'Reed (Korean (South Korea))', lang: 'ko-KR' },
-    { name: 'Rocko (Korean (South Korea))', lang: 'ko-KR' },
-    { name: 'Sandy (Korean (South Korea))', lang: 'ko-KR' },
-    { name: 'Shelley (Korean (South Korea))', lang: 'ko-KR' },
     { name: 'Yuna', lang: 'ko-KR' },
     { name: 'Google 한국의', lang: 'ko-KR' },
     { name: 'Google US English', lang: 'en-US' },
     { name: 'Kyoko', lang: 'ja-JP' },
   ];
 
-  assert.deepEqual(getKoreanVoices(voices).map((voice) => voice.name), [
-    'Yuna',
-    'Google 한국의',
-    'Flo (Korean (South Korea))',
-    'Shelley (Korean (South Korea))',
-    'Sandy (Korean (South Korea))',
-    'Grandma (Korean (South Korea))',
-    'Grandpa (Korean (South Korea))',
-    'Eddy (Korean (South Korea))',
-    'Reed (Korean (South Korea))',
-    'Rocko (Korean (South Korea))',
+  assert.deepEqual(getKoreanVoices(voices), [
+    { index: 3, name: 'Yuna', lang: 'ko-KR', label: 'Yuna — ko-KR' },
+    { index: 4, name: 'Google 한국의', lang: 'ko-KR', label: 'Google 한국의 — ko-KR' },
   ]);
 });
 
