@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Korean Voice Reader MVP</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Free static MVP</p>
+        <h1>한글 사진/문장을 한국어 음성으로 읽기</h1>
+        <p>
+          이미지는 브라우저에서 OCR로 읽고, 문장은 기기 내장 한국어 음성으로 재생합니다.
+          서버·API 키·백그라운드 PC 실행 없이 동작하는 MVP입니다.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>1. 한글 입력</h2>
+        <label class="file-drop" for="imageInput">
+          <span>한글이 들어간 사진 업로드</span>
+          <input id="imageInput" type="file" accept="image/*" />
+        </label>
+        <button id="ocrButton" type="button">사진에서 한글 추출</button>
+        <p id="ocrStatus" class="status">사진을 선택하거나 아래에 직접 입력하세요.</p>
+
+        <label for="textInput">읽을 문장</label>
+        <textarea id="textInput" rows="9" placeholder="여기에 한글 문장을 직접 입력하거나 OCR 결과를 수정하세요."></textarea>
+        <div class="inline-actions">
+          <button id="cleanButton" type="button">문장 정리</button>
+          <button id="sampleButton" type="button">샘플 넣기</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>2. 음성 선택</h2>
+        <label for="voiceSelect">한국어 음성</label>
+        <select id="voiceSelect"></select>
+        <p class="hint">목록은 브라우저/OS가 제공하는 한국어 음성입니다. 기기마다 다를 수 있습니다.</p>
+
+        <div class="controls">
+          <label>
+            속도 <output id="rateValue">1.0</output>
+            <input id="rateInput" type="range" min="0.5" max="2" step="0.1" value="1" />
+          </label>
+          <label>
+            높낮이 <output id="pitchValue">1.0</output>
+            <input id="pitchInput" type="range" min="0" max="2" step="0.1" value="1" />
+          </label>
+        </div>
+
+        <div class="player-actions">
+          <button id="speakButton" type="button">읽기</button>
+          <button id="pauseButton" type="button">일시정지/이어듣기</button>
+          <button id="stopButton" type="button">중지</button>
+        </div>
+      </section>
+
+      <section class="card muted">
+        <h2>무료 배포 방식</h2>
+        <ul>
+          <li>GitHub Pages, Cloudflare Pages, Netlify, Vercel 무료 플랜에 그대로 배포 가능합니다.</li>
+          <li>Tesseract.js는 CDN에서 불러오며 OCR은 사용자 브라우저에서 실행됩니다.</li>
+          <li>Web Speech API를 사용하므로 별도 TTS 서버 비용이 없습니다.</li>
+        </ul>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script type="module" src="./src/main.mjs"></script>
+  </body>
+</html>

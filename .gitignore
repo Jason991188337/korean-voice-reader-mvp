@@ -1,0 +1,6 @@
+.DS_Store
+.omc/
+CLAUDE.md
+node_modules/
+.env
+.env.*
