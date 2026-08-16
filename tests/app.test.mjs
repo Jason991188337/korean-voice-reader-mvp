@@ -8,6 +8,8 @@ import {
   buildGoogleTtsMp3Links,
   estimateSpeechDurationMs,
   calculatePlaybackProgress,
+  getPlayableVoiceOptions,
+  getTextFromProgress,
 } from '../src/app-logic.mjs';
 
 test('cleanKoreanText normalizes OCR whitespace while preserving Korean punctuation', () => {
@@ -27,8 +29,15 @@ test('getKoreanVoices only keeps Yuna and Google Korean voices', () => {
   ];
 
   assert.deepEqual(getKoreanVoices(voices), [
-    { index: 3, name: 'Yuna', lang: 'ko-KR', label: 'Yuna — ko-KR' },
-    { index: 4, name: 'Google 한국의', lang: 'ko-KR', label: 'Google 한국의 — ko-KR' },
+    { index: 3, name: 'Yuna', lang: 'ko-KR', label: 'Yuna — ko-KR', type: 'browser' },
+    { index: 4, name: 'Google 한국의', lang: 'ko-KR', label: 'Google 한국의 — ko-KR', type: 'browser' },
+  ]);
+});
+
+test('getPlayableVoiceOptions falls back to Yuna and Google when mobile browser exposes no Korean voices', () => {
+  assert.deepEqual(getPlayableVoiceOptions([]), [
+    { index: null, name: 'Yuna', lang: 'ko-KR', label: 'Yuna — ko-KR', type: 'fallback-yuna' },
+    { index: null, name: 'Google Korean', lang: 'ko-KR', label: 'Google Korean — ko-KR', type: 'fallback-google' },
   ]);
 });
 
@@ -60,4 +69,11 @@ test('calculatePlaybackProgress clamps elapsed playback progress', () => {
   assert.equal(calculatePlaybackProgress({ startedAt: 1000, now: 1000, durationMs: 5000 }), 0);
   assert.equal(calculatePlaybackProgress({ startedAt: 1000, now: 3500, durationMs: 5000 }), 50);
   assert.equal(calculatePlaybackProgress({ startedAt: 1000, now: 9000, durationMs: 5000 }), 100);
+});
+
+test('getTextFromProgress returns remaining text for an estimated seek position', () => {
+  const text = '가나다라마바사아자차';
+  assert.equal(getTextFromProgress(text, 0), text);
+  assert.equal(getTextFromProgress(text, 50), '바사아자차');
+  assert.equal(getTextFromProgress(text, 100), '차');
 });

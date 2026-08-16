@@ -63,7 +63,8 @@
             <span id="progressLabel">Playback progress</span>
             <span id="progressPercent">0%</span>
           </div>
-          <progress id="progressBar" value="0" max="100"></progress>
+          <input id="progressBar" class="playback-seek" type="range" min="0" max="100" step="1" value="0" aria-label="Playback seek bar" />
+          <p class="hint tiny">Drag the bar to jump to an estimated point in the text.</p>
         </div>
         <div id="downloadLinks" class="download-links" aria-live="polite"></div>
       </section>

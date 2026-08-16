@@ -1,10 +1,11 @@
 import {
   cleanKoreanText,
-  getKoreanVoices,
+  getPlayableVoiceOptions,
   buildSpeechUtteranceConfig,
   buildGoogleTtsMp3Links,
   estimateSpeechDurationMs,
   calculatePlaybackProgress,
+  getTextFromProgress,
 } from './app-logic.mjs';
 
 const $ = (id) => document.getElementById(id);
@@ -30,11 +31,13 @@ const progressPercent = $('progressPercent');
 const progressLabel = $('progressLabel');
 
 let allVoices = [];
+let playableVoiceOptions = [];
 let isPaused = false;
 let playbackTimer = null;
 let playbackStartedAt = 0;
 let playbackDurationMs = 0;
 let pausedAt = 0;
+let playbackFullText = '';
 
 function setStatus(message) {
   ocrStatus.textContent = message;
@@ -55,10 +58,11 @@ function stopProgressTimer(finalPercent = 0, label = 'Playback progress') {
   setProgress(finalPercent, label);
 }
 
-function startProgressTimer(text, rate) {
-  stopProgressTimer(0, 'Starting playback...');
+function startProgressTimer(text, rate, initialProgress = 0) {
+  stopProgressTimer(initialProgress, 'Starting playback...');
   playbackDurationMs = estimateSpeechDurationMs(text, rate);
-  playbackStartedAt = Date.now();
+  const initialElapsed = playbackDurationMs * (Math.min(100, Math.max(0, initialProgress)) / 100);
+  playbackStartedAt = Date.now() - initialElapsed;
   pausedAt = 0;
   playbackTimer = window.setInterval(() => {
     const progress = calculatePlaybackProgress({
@@ -100,7 +104,7 @@ function resumeProgressTimer() {
 
 function refreshVoices() {
   allVoices = window.speechSynthesis?.getVoices?.() || [];
-  const koreanVoices = getKoreanVoices(allVoices);
+  playableVoiceOptions = getPlayableVoiceOptions(allVoices);
   voiceSelect.innerHTML = '';
 
   if (!('speechSynthesis' in window)) {
@@ -109,16 +113,12 @@ function refreshVoices() {
     return;
   }
 
-  if (koreanVoices.length === 0) {
-    voiceSelect.append(new Option('No Yuna or Google Korean voice is available on this browser', ''));
-    speakButton.disabled = true;
-    return;
-  }
-
   speakButton.disabled = false;
 
-  for (const voice of koreanVoices) {
-    voiceSelect.append(new Option(voice.label, String(voice.index)));
+  for (const voice of playableVoiceOptions) {
+    const option = new Option(voice.label, voice.index === null ? voice.type : String(voice.index));
+    option.dataset.type = voice.type;
+    voiceSelect.append(option);
   }
 }
 
@@ -156,14 +156,14 @@ async function runOcr() {
   }
 }
 
-function speak() {
+function playSpeech(textToSpeak, initialProgress = 0) {
   if (!('speechSynthesis' in window)) {
     setStatus('This browser does not support speech playback.');
     return;
   }
 
   const config = buildSpeechUtteranceConfig({
-    text: textInput.value,
+    text: textToSpeak,
     rate: rateInput.value,
     pitch: pitchInput.value,
     voiceIndex: voiceSelect.value,
@@ -185,8 +185,9 @@ function speak() {
   }
 
   utterance.onstart = () => {
-    startProgressTimer(config.text, config.rate);
-    setStatus('Playing speech...');
+    startProgressTimer(playbackFullText || config.text, config.rate, initialProgress);
+    const selected = voiceSelect.selectedOptions[0]?.textContent || 'selected Korean voice';
+    setStatus(`Playing with ${selected}...`);
   };
   utterance.onend = () => {
     isPaused = false;
@@ -200,6 +201,11 @@ function speak() {
 
   isPaused = false;
   window.speechSynthesis.speak(utterance);
+}
+
+function speak() {
+  playbackFullText = cleanKoreanText(textInput.value);
+  playSpeech(playbackFullText, 0);
 }
 
 function pauseOrResume() {
@@ -224,6 +230,24 @@ function stop() {
   pausedAt = 0;
   stopProgressTimer(0, 'Playback stopped');
   setStatus('Stopped.');
+}
+
+function seekPlayback() {
+  const targetProgress = Number(progressBar.value);
+  setProgress(targetProgress, 'Seek position');
+
+  playbackFullText = playbackFullText || cleanKoreanText(textInput.value);
+  if (!playbackFullText) {
+    setStatus('Please enter text before seeking playback.');
+    return;
+  }
+
+  if (!('speechSynthesis' in window)) return;
+  const remainingText = getTextFromProgress(playbackFullText, targetProgress);
+  window.speechSynthesis.cancel();
+  isPaused = false;
+  pausedAt = 0;
+  playSpeech(remainingText, targetProgress);
 }
 
 function renderMp3Links() {
@@ -266,6 +290,8 @@ sampleButton.addEventListener('click', () => {
 speakButton.addEventListener('click', speak);
 pauseButton.addEventListener('click', pauseOrResume);
 stopButton.addEventListener('click', stop);
+progressBar.addEventListener('input', () => setProgress(progressBar.value, 'Seek position'));
+progressBar.addEventListener('change', seekPlayback);
 mp3Button.addEventListener('click', renderMp3Links);
 rateInput.addEventListener('input', () => { rateValue.value = Number(rateInput.value).toFixed(1); });
 pitchInput.addEventListener('input', () => { pitchValue.value = Number(pitchInput.value).toFixed(1); });

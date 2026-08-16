@@ -5,8 +5,8 @@ A zero-server static web MVP that lets users:
 - Type Korean text directly.
 - Upload an image containing Korean text and extract it in the browser with Tesseract.js.
 - Read the resulting Korean text aloud with the browser Web Speech API.
-- Show only Yuna or Google Korean voices when available, then adjust rate/pitch.
-- Display an estimated playback progress bar while speech is playing.
+- Show Yuna and Google Korean voice options; when a mobile browser exposes no voices, fallback options remain visible.
+- Display an estimated playback progress bar while speech is playing, with a draggable seek slider.
 - Generate Google Korean TTS MP3 links for the current text.
 
 ## Run locally

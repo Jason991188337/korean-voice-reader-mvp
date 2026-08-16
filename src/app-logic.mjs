@@ -25,8 +25,19 @@ export function getKoreanVoices(voices = []) {
         name,
         lang,
         label: `${name} — ${lang}`,
+        type: 'browser',
       };
     });
+}
+
+export function getPlayableVoiceOptions(voices = []) {
+  const available = getKoreanVoices(voices);
+  if (available.length > 0) return available;
+
+  return [
+    { index: null, name: 'Yuna', lang: 'ko-KR', label: 'Yuna — ko-KR', type: 'fallback-yuna' },
+    { index: null, name: 'Google Korean', lang: 'ko-KR', label: 'Google Korean — ko-KR', type: 'fallback-google' },
+  ];
 }
 
 function clampNumber(value, min, max, fallback) {
@@ -110,4 +121,13 @@ export function calculatePlaybackProgress({ startedAt, now, durationMs }) {
   const elapsed = Math.max(0, now - startedAt);
   const percentage = Math.round((elapsed / durationMs) * 100);
   return Math.min(100, Math.max(0, percentage));
+}
+
+export function getTextFromProgress(text, progress) {
+  const normalized = cleanKoreanText(text);
+  if (!normalized) return '';
+
+  const safeProgress = Math.min(100, Math.max(0, Number(progress) || 0));
+  const index = Math.min(normalized.length - 1, Math.floor((safeProgress / 100) * normalized.length));
+  return normalized.slice(index);
 }
