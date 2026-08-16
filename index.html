@@ -3,23 +3,64 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Korean Voice Reader MVP</title>
-    <link rel="stylesheet" href="./src/styles.css" />
+    <title>Winter Voice Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..900;1,9..40,300..900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./src/styles.css?v=20260817-winter-penguins" />
   </head>
   <body>
-    <main class="shell">
-      <section class="hero">
-        <p class="eyebrow">Free static MVP</p>
-        <h1>Read Korean Text and Images Aloud</h1>
-        <p>
-          Upload a Korean text image or type Korean text directly. OCR runs in the browser,
-          and speech playback uses the device's built-in Korean voices. No server, API key,
-          or always-on background computer is required.
-        </p>
+    <div class="snowfield" aria-hidden="true">
+      <span class="snowflake snowflake-a">✦</span>
+      <span class="snowflake snowflake-b">✧</span>
+      <span class="snowflake snowflake-c">❄</span>
+      <span class="snowflake snowflake-d">✦</span>
+    </div>
+
+    <main class="shell winter-gradient">
+      <section class="hero card hero-card">
+        <div class="hero-copy">
+          <p class="eyebrow">Free static MVP · Winter voice studio</p>
+          <h1>Read Korean Text and Images Aloud</h1>
+          <p>
+            Upload a Korean text image or type Korean text directly. OCR runs in the browser,
+            and speech playback uses Yuna or Google Korean voice choices. No server, API key,
+            or always-on background computer is required.
+          </p>
+        </div>
+        <div class="mascot-row" aria-label="Pax and Polly winter mascots">
+          <article class="penguin-card pax-card" aria-label="Pax mascot">
+            <div class="penguin-body">
+              <span class="beanie"></span>
+              <span class="eye left"></span>
+              <span class="eye right"></span>
+              <span class="beak"></span>
+              <span class="belly"></span>
+              <span class="scarf scarf-blue"></span>
+            </div>
+            <strong>Pax</strong>
+            <small>snow reader</small>
+          </article>
+          <article class="penguin-card polly-card" aria-label="Polly mascot">
+            <div class="penguin-body">
+              <span class="bow"></span>
+              <span class="eye left"></span>
+              <span class="eye right"></span>
+              <span class="beak"></span>
+              <span class="belly"></span>
+              <span class="scarf scarf-pink"></span>
+            </div>
+            <strong>Polly</strong>
+            <small>voice buddy</small>
+          </article>
+        </div>
       </section>
 
-      <section class="card">
-        <h2>1. Korean Input</h2>
+      <section class="card input-card">
+        <div class="section-title">
+          <span class="section-number">01</span>
+          <h2>Korean Input</h2>
+        </div>
         <label class="file-drop" for="imageInput">
           <span>Upload an image containing Korean text</span>
           <input id="imageInput" type="file" accept="image/*" />
@@ -35,11 +76,14 @@
         </div>
       </section>
 
-      <section class="card">
-        <h2>2. Voice Selection</h2>
+      <section class="card voice-card">
+        <div class="section-title">
+          <span class="section-number">02</span>
+          <h2>Voice Selection</h2>
+        </div>
         <label for="voiceSelect">Korean voice</label>
         <select id="voiceSelect"></select>
-        <p class="hint">Only Yuna or Google Korean voices provided by the browser/OS are shown. The exact list varies by device.</p>
+        <p class="hint">Only Yuna or Google Korean voices are shown. If a browser hides them, Pax and Polly keep fallback choices visible.</p>
 
         <div class="controls">
           <label>
@@ -64,22 +108,25 @@
             <span id="progressPercent">0%</span>
           </div>
           <input id="progressBar" class="playback-seek" type="range" min="0" max="100" step="1" value="0" aria-label="Playback seek bar" />
-          <p class="hint tiny">Drag the bar to jump to an estimated point in the text.</p>
+          <p class="hint tiny">Drag the icy bar to jump to an estimated point in the text.</p>
         </div>
         <div id="downloadLinks" class="download-links" aria-live="polite"></div>
       </section>
 
-      <section class="card muted">
-        <h2>Free Deployment</h2>
-        <ul>
-          <li>Deploy as-is on free plans such as GitHub Pages, Cloudflare Pages, Netlify, or Vercel.</li>
-          <li>Tesseract.js is loaded from a CDN, and OCR runs in the user's browser.</li>
-          <li>The Web Speech API handles playback, so no separate TTS server is required.</li>
-        </ul>
+      <section class="card muted deployment-card">
+        <div class="mini-penguin" aria-hidden="true">🐧</div>
+        <div>
+          <h2>Free Deployment</h2>
+          <ul>
+            <li>Deploy as-is on free plans such as GitHub Pages, Cloudflare Pages, Netlify, or Vercel.</li>
+            <li>Tesseract.js is loaded from a CDN, and OCR runs in the user's browser.</li>
+            <li>The Web Speech API handles playback, so no separate TTS server is required.</li>
+          </ul>
+        </div>
       </section>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script type="module" src="./src/main.mjs?v=20260817-voice-fallback-seek"></script>
+    <script type="module" src="./src/main.mjs?v=20260817-winter-penguins"></script>
   </body>
 </html>

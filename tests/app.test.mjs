@@ -1,5 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 import {
   cleanKoreanText,
@@ -83,4 +88,17 @@ test('getTextFromProgress returns remaining text for an estimated seek position'
   assert.equal(getTextFromProgress(text, 0), text);
   assert.equal(getTextFromProgress(text, 50), '바사아자차');
   assert.equal(getTextFromProgress(text, 100), '차');
+});
+
+test('static UI includes winter Pax and Polly visual theme hooks', () => {
+  const html = readFileSync(join(projectRoot, 'index.html'), 'utf8');
+  const css = readFileSync(join(projectRoot, 'src/styles.css'), 'utf8');
+
+  assert.match(html, /Winter Voice Studio/);
+  assert.match(html, /Pax/);
+  assert.match(html, /Polly/);
+  assert.match(html, /mascot-row/);
+  assert.match(css, /winter-gradient/);
+  assert.match(css, /penguin-card/);
+  assert.match(css, /snowflake/);
 });
