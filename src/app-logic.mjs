@@ -32,12 +32,18 @@ export function getKoreanVoices(voices = []) {
 
 export function getPlayableVoiceOptions(voices = []) {
   const available = getKoreanVoices(voices);
-  if (available.length > 0) return available;
+  const hasYuna = available.some((voice) => voice.name.toLowerCase().includes('yuna'));
+  const hasGoogle = available.some((voice) => voice.name.toLowerCase().includes('google'));
+  const options = [...available];
 
-  return [
-    { index: null, name: 'Yuna', lang: 'ko-KR', label: 'Yuna — ko-KR', type: 'fallback-yuna' },
-    { index: null, name: 'Google Korean', lang: 'ko-KR', label: 'Google Korean — ko-KR', type: 'fallback-google' },
-  ];
+  if (!hasYuna) {
+    options.push({ index: null, name: 'Yuna', lang: 'ko-KR', label: 'Yuna — ko-KR', type: 'fallback-yuna' });
+  }
+  if (!hasGoogle) {
+    options.push({ index: null, name: 'Google Korean', lang: 'ko-KR', label: 'Google Korean — ko-KR', type: 'fallback-google' });
+  }
+
+  return options;
 }
 
 function clampNumber(value, min, max, fallback) {

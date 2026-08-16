@@ -41,6 +41,13 @@ test('getPlayableVoiceOptions falls back to Yuna and Google when mobile browser 
   ]);
 });
 
+test('getPlayableVoiceOptions adds missing Google fallback when only Yuna is available', () => {
+  assert.deepEqual(getPlayableVoiceOptions([{ name: 'Yuna', lang: 'ko-KR' }]), [
+    { index: 0, name: 'Yuna', lang: 'ko-KR', label: 'Yuna — ko-KR', type: 'browser' },
+    { index: null, name: 'Google Korean', lang: 'ko-KR', label: 'Google Korean — ko-KR', type: 'fallback-google' },
+  ]);
+});
+
 test('buildSpeechUtteranceConfig clamps speech controls and defaults to Korean', () => {
   assert.deepEqual(
     buildSpeechUtteranceConfig({ text: '테스트', rate: 99, pitch: -3, voiceIndex: '2' }),
