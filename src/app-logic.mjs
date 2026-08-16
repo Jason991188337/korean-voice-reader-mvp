@@ -9,16 +9,34 @@ export function cleanKoreanText(input = '') {
     .trim();
 }
 
+const RECOMMENDED_KOREAN_VOICE_RANKS = [
+  'yuna',
+  'google',
+  'flo',
+  'shelley',
+  'sandy',
+  'grandma',
+  'grandpa',
+  'eddy',
+  'reed',
+  'rocko',
+];
+
+function recommendedVoiceRank(name) {
+  const normalized = String(name || '').toLowerCase();
+  const rank = RECOMMENDED_KOREAN_VOICE_RANKS.findIndex((keyword) => normalized.includes(keyword));
+  return rank === -1 ? Number.POSITIVE_INFINITY : rank;
+}
+
 export function getKoreanVoices(voices = []) {
   return voices
-    .map((voice, index) => ({ voice, index }))
-    .filter(({ voice }) => {
+    .map((voice, index) => ({ voice, index, rank: recommendedVoiceRank(voice.name) }))
+    .filter(({ voice, rank }) => {
       const lang = String(voice.lang || '').toLowerCase().replace('_', '-');
-      const name = String(voice.name || '').toLowerCase();
-      const isKorean = lang.startsWith('ko');
-      const isPreferredVoice = name.includes('yuna') || name.includes('google');
-      return isKorean && isPreferredVoice;
+      return lang.startsWith('ko') && Number.isFinite(rank);
     })
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .slice(0, 10)
     .map(({ voice, index }) => {
       const name = voice.name || `Korean Voice ${index}`;
       const lang = voice.lang || 'ko-KR';
