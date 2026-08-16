@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..900;1,9..40,300..900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./src/styles.css?v=20260817-winter-penguins" />
+    <link rel="stylesheet" href="./src/styles.css?v=20260817-extra-voices" />
   </head>
   <body>
     <div class="snowfield" aria-hidden="true">
@@ -24,7 +24,7 @@
           <h1>Read Korean Text and Images Aloud</h1>
           <p>
             Upload a Korean text image or type Korean text directly. OCR runs in the browser,
-            and speech playback uses Yuna or Google Korean voice choices. No server, API key,
+            and speech playback keeps Yuna and Google Korean choices while adding extra available Korean voices. No server, API key,
             or always-on background computer is required.
           </p>
         </div>
@@ -83,7 +83,7 @@
         </div>
         <label for="voiceSelect">Korean voice</label>
         <select id="voiceSelect"></select>
-        <p class="hint">Only Yuna or Google Korean voices are shown. If a browser hides them, Pax and Polly keep fallback choices visible.</p>
+        <p class="hint">Yuna and Google Korean stay at the top. Extra recommended Korean voices appear below when this browser/OS provides them.</p>
 
         <div class="controls">
           <label>
@@ -127,6 +127,6 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script type="module" src="./src/main.mjs?v=20260817-winter-penguins"></script>
+    <script type="module" src="./src/main.mjs?v=20260817-extra-voices"></script>
   </body>
 </html>

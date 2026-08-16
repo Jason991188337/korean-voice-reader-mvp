@@ -9,14 +9,34 @@ export function cleanKoreanText(input = '') {
     .trim();
 }
 
+const RECOMMENDED_KOREAN_VOICE_RANKS = [
+  'yuna',
+  'google',
+  'flo',
+  'shelley',
+  'sandy',
+  'grandma',
+  'grandpa',
+  'eddy',
+  'reed',
+  'rocko',
+];
+
+function recommendedVoiceRank(name) {
+  const normalized = String(name || '').toLowerCase();
+  const rank = RECOMMENDED_KOREAN_VOICE_RANKS.findIndex((keyword) => normalized.includes(keyword));
+  return rank === -1 ? Number.POSITIVE_INFINITY : rank;
+}
+
 export function getKoreanVoices(voices = []) {
   return voices
-    .map((voice, index) => ({ voice, index }))
-    .filter(({ voice }) => {
+    .map((voice, index) => ({ voice, index, rank: recommendedVoiceRank(voice.name) }))
+    .filter(({ voice, rank }) => {
       const lang = String(voice.lang || '').toLowerCase().replace('_', '-');
-      const name = String(voice.name || '').toLowerCase();
-      return lang.startsWith('ko') && (name.includes('yuna') || name.includes('google'));
+      return lang.startsWith('ko') && Number.isFinite(rank);
     })
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .slice(0, 10)
     .map(({ voice, index }) => {
       const name = voice.name || `Korean Voice ${index}`;
       const lang = voice.lang || 'ko-KR';
@@ -32,18 +52,16 @@ export function getKoreanVoices(voices = []) {
 
 export function getPlayableVoiceOptions(voices = []) {
   const available = getKoreanVoices(voices);
-  const hasYuna = available.some((voice) => voice.name.toLowerCase().includes('yuna'));
-  const hasGoogle = available.some((voice) => voice.name.toLowerCase().includes('google'));
-  const options = [...available];
+  const yuna = available.find((voice) => voice.name.toLowerCase().includes('yuna')) ||
+    { index: null, name: 'Yuna', lang: 'ko-KR', label: 'Yuna — ko-KR', type: 'fallback-yuna' };
+  const google = available.find((voice) => voice.name.toLowerCase().includes('google')) ||
+    { index: null, name: 'Google Korean', lang: 'ko-KR', label: 'Google Korean — ko-KR', type: 'fallback-google' };
+  const extras = available.filter((voice) => {
+    const name = voice.name.toLowerCase();
+    return !name.includes('yuna') && !name.includes('google');
+  });
 
-  if (!hasYuna) {
-    options.push({ index: null, name: 'Yuna', lang: 'ko-KR', label: 'Yuna — ko-KR', type: 'fallback-yuna' });
-  }
-  if (!hasGoogle) {
-    options.push({ index: null, name: 'Google Korean', lang: 'ko-KR', label: 'Google Korean — ko-KR', type: 'fallback-google' });
-  }
-
-  return options;
+  return [yuna, google, ...extras];
 }
 
 function clampNumber(value, min, max, fallback) {

@@ -22,7 +22,7 @@ test('cleanKoreanText normalizes OCR whitespace while preserving Korean punctuat
   assert.equal(cleanKoreanText(raw), '안녕하세요 세계! 오늘은 좋은 날입니다.');
 });
 
-test('getKoreanVoices only keeps Yuna and Google Korean voices', () => {
+test('getKoreanVoices keeps Yuna and Google first while adding recommended available Korean voices', () => {
   const voices = [
     { name: 'Alex', lang: 'en-US' },
     { name: 'Eddy (Korean (South Korea))', lang: 'ko-KR' },
@@ -36,6 +36,8 @@ test('getKoreanVoices only keeps Yuna and Google Korean voices', () => {
   assert.deepEqual(getKoreanVoices(voices), [
     { index: 3, name: 'Yuna', lang: 'ko-KR', label: 'Yuna — ko-KR', type: 'browser' },
     { index: 4, name: 'Google 한국의', lang: 'ko-KR', label: 'Google 한국의 — ko-KR', type: 'browser' },
+    { index: 2, name: 'Flo (Korean (South Korea))', lang: 'ko-KR', label: 'Flo (Korean (South Korea)) — ko-KR', type: 'browser' },
+    { index: 1, name: 'Eddy (Korean (South Korea))', lang: 'ko-KR', label: 'Eddy (Korean (South Korea)) — ko-KR', type: 'browser' },
   ]);
 });
 

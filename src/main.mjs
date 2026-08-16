@@ -6,7 +6,7 @@ import {
   estimateSpeechDurationMs,
   calculatePlaybackProgress,
   getTextFromProgress,
-} from './app-logic.mjs?v=20260817-winter-penguins';
+} from './app-logic.mjs?v=20260817-extra-voices';
 
 const $ = (id) => document.getElementById(id);
 
