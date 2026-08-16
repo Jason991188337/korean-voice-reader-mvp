@@ -6,6 +6,8 @@ import {
   getKoreanVoices,
   buildSpeechUtteranceConfig,
   buildGoogleTtsMp3Links,
+  estimateSpeechDurationMs,
+  calculatePlaybackProgress,
 } from '../src/app-logic.mjs';
 
 test('cleanKoreanText normalizes OCR whitespace while preserving Korean punctuation', () => {
@@ -59,4 +61,17 @@ test('buildGoogleTtsMp3Links creates encoded Korean MP3 links in short chunks', 
   assert.match(links[0].url, /tl=ko/);
   assert.match(links[0].url, /client=tw-ob/);
   assert.ok(decodeURIComponent(links[0].url).includes('안녕하세요'));
+});
+
+test('estimateSpeechDurationMs scales by text length and speech rate', () => {
+  const normal = estimateSpeechDurationMs('안녕하세요'.repeat(20), 1);
+  const fast = estimateSpeechDurationMs('안녕하세요'.repeat(20), 2);
+  assert.ok(normal >= 3000);
+  assert.ok(fast < normal);
+});
+
+test('calculatePlaybackProgress clamps elapsed playback progress', () => {
+  assert.equal(calculatePlaybackProgress({ startedAt: 1000, now: 1000, durationMs: 5000 }), 0);
+  assert.equal(calculatePlaybackProgress({ startedAt: 1000, now: 3500, durationMs: 5000 }), 50);
+  assert.equal(calculatePlaybackProgress({ startedAt: 1000, now: 9000, durationMs: 5000 }), 100);
 });

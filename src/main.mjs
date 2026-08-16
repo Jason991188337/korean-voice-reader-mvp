@@ -1,4 +1,11 @@
-import { cleanKoreanText, getKoreanVoices, buildSpeechUtteranceConfig, buildGoogleTtsMp3Links } from './app-logic.mjs';
+import {
+  cleanKoreanText,
+  getKoreanVoices,
+  buildSpeechUtteranceConfig,
+  buildGoogleTtsMp3Links,
+  estimateSpeechDurationMs,
+  calculatePlaybackProgress,
+} from './app-logic.mjs';
 
 const $ = (id) => document.getElementById(id);
 
@@ -18,12 +25,77 @@ const pauseButton = $('pauseButton');
 const stopButton = $('stopButton');
 const mp3Button = $('mp3Button');
 const downloadLinks = $('downloadLinks');
+const progressBar = $('progressBar');
+const progressPercent = $('progressPercent');
+const progressLabel = $('progressLabel');
 
 let allVoices = [];
 let isPaused = false;
+let playbackTimer = null;
+let playbackStartedAt = 0;
+let playbackDurationMs = 0;
+let pausedAt = 0;
 
 function setStatus(message) {
   ocrStatus.textContent = message;
+}
+
+function setProgress(percent, label = 'Playback progress') {
+  const safePercent = Math.min(100, Math.max(0, Math.round(percent)));
+  progressBar.value = safePercent;
+  progressPercent.textContent = `${safePercent}%`;
+  progressLabel.textContent = label;
+}
+
+function stopProgressTimer(finalPercent = 0, label = 'Playback progress') {
+  if (playbackTimer) {
+    window.clearInterval(playbackTimer);
+    playbackTimer = null;
+  }
+  setProgress(finalPercent, label);
+}
+
+function startProgressTimer(text, rate) {
+  stopProgressTimer(0, 'Starting playback...');
+  playbackDurationMs = estimateSpeechDurationMs(text, rate);
+  playbackStartedAt = Date.now();
+  pausedAt = 0;
+  playbackTimer = window.setInterval(() => {
+    const progress = calculatePlaybackProgress({
+      startedAt: playbackStartedAt,
+      now: Date.now(),
+      durationMs: playbackDurationMs,
+    });
+    setProgress(progress, 'Playing...');
+    if (progress >= 100) {
+      stopProgressTimer(100, 'Finishing...');
+    }
+  }, 250);
+}
+
+function pauseProgressTimer() {
+  if (!playbackTimer) return;
+  pausedAt = Date.now();
+  window.clearInterval(playbackTimer);
+  playbackTimer = null;
+  setProgress(progressBar.value, 'Paused');
+}
+
+function resumeProgressTimer() {
+  if (!pausedAt || !playbackDurationMs) return;
+  playbackStartedAt += Date.now() - pausedAt;
+  pausedAt = 0;
+  playbackTimer = window.setInterval(() => {
+    const progress = calculatePlaybackProgress({
+      startedAt: playbackStartedAt,
+      now: Date.now(),
+      durationMs: playbackDurationMs,
+    });
+    setProgress(progress, 'Playing...');
+    if (progress >= 100) {
+      stopProgressTimer(100, 'Finishing...');
+    }
+  }, 250);
 }
 
 function refreshVoices() {
@@ -112,12 +184,19 @@ function speak() {
     utterance.voice = allVoices[config.voiceIndex];
   }
 
-  utterance.onstart = () => setStatus('Playing speech...');
+  utterance.onstart = () => {
+    startProgressTimer(config.text, config.rate);
+    setStatus('Playing speech...');
+  };
   utterance.onend = () => {
     isPaused = false;
+    stopProgressTimer(100, 'Playback complete');
     setStatus('Playback complete.');
   };
-  utterance.onerror = (event) => setStatus(`Speech playback error: ${event.error || 'unknown error'}`);
+  utterance.onerror = (event) => {
+    stopProgressTimer(0, 'Playback error');
+    setStatus(`Speech playback error: ${event.error || 'unknown error'}`);
+  };
 
   isPaused = false;
   window.speechSynthesis.speak(utterance);
@@ -128,10 +207,12 @@ function pauseOrResume() {
   if (window.speechSynthesis.speaking && !isPaused) {
     window.speechSynthesis.pause();
     isPaused = true;
+    pauseProgressTimer();
     setStatus('Paused.');
   } else if (isPaused) {
     window.speechSynthesis.resume();
     isPaused = false;
+    resumeProgressTimer();
     setStatus('Resumed playback.');
   }
 }
@@ -140,6 +221,8 @@ function stop() {
   if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
   isPaused = false;
+  pausedAt = 0;
+  stopProgressTimer(0, 'Playback stopped');
   setStatus('Stopped.');
 }
 

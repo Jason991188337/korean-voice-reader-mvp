@@ -112,3 +112,22 @@ export function buildGoogleTtsMp3Links(text, { maxChars = 180 } = {}) {
     };
   });
 }
+
+export function estimateSpeechDurationMs(text, rate = 1) {
+  const normalized = cleanKoreanText(text);
+  if (!normalized) return 0;
+
+  const safeRate = clampNumber(rate, 0.5, 2, 1);
+  const koreanChars = (normalized.match(/[가-힣]/g) || []).length;
+  const otherChars = normalized.replace(/[가-힣\s]/g, '').length;
+  const wordCount = normalized.split(/\s+/).filter(Boolean).length;
+  const estimatedSeconds = Math.max(2, (koreanChars * 0.16 + otherChars * 0.08 + wordCount * 0.18) / safeRate);
+  return Math.round(estimatedSeconds * 1000);
+}
+
+export function calculatePlaybackProgress({ startedAt, now, durationMs }) {
+  if (!durationMs || durationMs <= 0) return 0;
+  const elapsed = Math.max(0, now - startedAt);
+  const percentage = Math.round((elapsed / durationMs) * 100);
+  return Math.min(100, Math.max(0, percentage));
+}

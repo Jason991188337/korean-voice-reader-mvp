@@ -58,6 +58,13 @@
           <button id="stopButton" type="button">Stop</button>
           <button id="mp3Button" type="button">Create Google MP3 Download Link</button>
         </div>
+        <div class="progress-panel" aria-label="Playback progress">
+          <div class="progress-header">
+            <span id="progressLabel">Playback progress</span>
+            <span id="progressPercent">0%</span>
+          </div>
+          <progress id="progressBar" value="0" max="100"></progress>
+        </div>
         <div id="downloadLinks" class="download-links" aria-live="polite"></div>
       </section>
 
