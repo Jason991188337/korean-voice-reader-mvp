@@ -6,7 +6,13 @@ import {
   estimateSpeechDurationMs,
   calculatePlaybackProgress,
   getTextFromProgress,
-} from './app-logic.mjs?v=20260817-extra-voices';
+  getSingleMp3Mode,
+  buildSingleMp3Request,
+  splitTextIntoLines,
+  clampLinePauseMs,
+  getRemainingLinesFromProgress,
+} from './app-logic.mjs?v=20260817-line-pause';
+import { SINGLE_MP3_WORKER_URL } from './config.mjs?v=20260817-single-mp3';
 
 const $ = (id) => document.getElementById(id);
 
@@ -21,10 +27,13 @@ const rateInput = $('rateInput');
 const pitchInput = $('pitchInput');
 const rateValue = $('rateValue');
 const pitchValue = $('pitchValue');
+const linePauseInput = $('linePauseInput');
+const linePauseValue = $('linePauseValue');
 const speakButton = $('speakButton');
 const pauseButton = $('pauseButton');
 const stopButton = $('stopButton');
 const mp3Button = $('mp3Button');
+const singleMp3Button = $('singleMp3Button');
 const downloadLinks = $('downloadLinks');
 const progressBar = $('progressBar');
 const progressPercent = $('progressPercent');
@@ -38,6 +47,21 @@ let playbackStartedAt = 0;
 let playbackDurationMs = 0;
 let pausedAt = 0;
 let playbackFullText = '';
+let lineQueue = [];
+let linePauseTimer = null;
+let resumeNextLine = false;
+let speakNextLineRef = null;
+
+function clearLinePauseTimer() {
+  if (linePauseTimer) {
+    window.clearTimeout(linePauseTimer);
+    linePauseTimer = null;
+  }
+}
+
+function currentLinePauseMs() {
+  return clampLinePauseMs(Number(linePauseInput.value) * 1000);
+}
 
 function setStatus(message) {
   ocrStatus.textContent = message;
@@ -58,9 +82,9 @@ function stopProgressTimer(finalPercent = 0, label = 'Playback progress') {
   setProgress(finalPercent, label);
 }
 
-function startProgressTimer(text, rate, initialProgress = 0) {
+function startProgressTimer(text, rate, initialProgress = 0, extraDurationMs = 0) {
   stopProgressTimer(initialProgress, 'Starting playback...');
-  playbackDurationMs = estimateSpeechDurationMs(text, rate);
+  playbackDurationMs = estimateSpeechDurationMs(text, rate) + extraDurationMs;
   const initialElapsed = playbackDurationMs * (Math.min(100, Math.max(0, initialProgress)) / 100);
   playbackStartedAt = Date.now() - initialElapsed;
   pausedAt = 0;
@@ -203,7 +227,85 @@ function playSpeech(textToSpeak, initialProgress = 0) {
   window.speechSynthesis.speak(utterance);
 }
 
+function playLineSequence(lines, initialProgress = 0) {
+  clearLinePauseTimer();
+  window.speechSynthesis.cancel();
+  resumeNextLine = false;
+  isPaused = false;
+  lineQueue = lines.slice();
+  const pauseMs = currentLinePauseMs();
+  const totalPauseMs = pauseMs * Math.max(0, lines.length - 1);
+  let started = false;
+
+  const speakNextLine = () => {
+    linePauseTimer = null;
+    const line = lineQueue.shift();
+    if (!line) return;
+
+    const config = buildSpeechUtteranceConfig({
+      text: line,
+      rate: rateInput.value,
+      pitch: pitchInput.value,
+      voiceIndex: voiceSelect.value,
+    });
+
+    const utterance = new SpeechSynthesisUtterance(config.text);
+    utterance.lang = config.lang;
+    utterance.rate = config.rate;
+    utterance.pitch = config.pitch;
+    if (config.voiceIndex !== null && allVoices[config.voiceIndex]) {
+      utterance.voice = allVoices[config.voiceIndex];
+    }
+
+    utterance.onstart = () => {
+      if (!started) {
+        started = true;
+        startProgressTimer(playbackFullText, config.rate, initialProgress, totalPauseMs);
+        const selected = voiceSelect.selectedOptions[0]?.textContent || 'selected Korean voice';
+        setStatus(`Playing line by line with ${selected}...`);
+      }
+    };
+    utterance.onend = () => {
+      if (lineQueue.length === 0) {
+        isPaused = false;
+        stopProgressTimer(100, 'Playback complete');
+        setStatus('Playback complete.');
+        return;
+      }
+      if (isPaused) {
+        resumeNextLine = true;
+        return;
+      }
+      linePauseTimer = window.setTimeout(speakNextLine, pauseMs);
+    };
+    utterance.onerror = (event) => {
+      if (event.error === 'interrupted' || event.error === 'canceled') return;
+      clearLinePauseTimer();
+      lineQueue = [];
+      stopProgressTimer(0, 'Playback error');
+      setStatus(`Speech playback error: ${event.error || 'unknown error'}`);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  speakNextLineRef = speakNextLine;
+  speakNextLine();
+}
+
 function speak() {
+  const lines = splitTextIntoLines(textInput.value);
+
+  if (lines.length > 1) {
+    if (!('speechSynthesis' in window)) {
+      setStatus('This browser does not support speech playback.');
+      return;
+    }
+    playbackFullText = lines.join('\n');
+    playLineSequence(lines, 0);
+    return;
+  }
+
   playbackFullText = cleanKoreanText(textInput.value);
   playSpeech(playbackFullText, 0);
 }
@@ -215,16 +317,31 @@ function pauseOrResume() {
     isPaused = true;
     pauseProgressTimer();
     setStatus('Paused.');
+  } else if (linePauseTimer && !isPaused) {
+    clearLinePauseTimer();
+    resumeNextLine = true;
+    isPaused = true;
+    pauseProgressTimer();
+    setStatus('Paused.');
   } else if (isPaused) {
-    window.speechSynthesis.resume();
     isPaused = false;
-    resumeProgressTimer();
+    if (resumeNextLine) {
+      resumeNextLine = false;
+      resumeProgressTimer();
+      speakNextLineRef?.();
+    } else {
+      window.speechSynthesis.resume();
+      resumeProgressTimer();
+    }
     setStatus('Resumed playback.');
   }
 }
 
 function stop() {
   if (!('speechSynthesis' in window)) return;
+  clearLinePauseTimer();
+  lineQueue = [];
+  resumeNextLine = false;
   window.speechSynthesis.cancel();
   isPaused = false;
   pausedAt = 0;
@@ -236,17 +353,26 @@ function seekPlayback() {
   const targetProgress = Number(progressBar.value);
   setProgress(targetProgress, 'Seek position');
 
-  playbackFullText = playbackFullText || cleanKoreanText(textInput.value);
-  if (!playbackFullText) {
+  const lines = splitTextIntoLines(playbackFullText || textInput.value);
+  if (lines.length === 0) {
     setStatus('Please enter text before seeking playback.');
     return;
   }
 
   if (!('speechSynthesis' in window)) return;
-  const remainingText = getTextFromProgress(playbackFullText, targetProgress);
+  playbackFullText = lines.join('\n');
+  clearLinePauseTimer();
   window.speechSynthesis.cancel();
   isPaused = false;
   pausedAt = 0;
+
+  if (lines.length > 1) {
+    const remainingLines = getRemainingLinesFromProgress(playbackFullText, targetProgress);
+    playLineSequence(remainingLines, targetProgress);
+    return;
+  }
+
+  const remainingText = getTextFromProgress(playbackFullText, targetProgress);
   playSpeech(remainingText, targetProgress);
 }
 
@@ -279,6 +405,49 @@ function renderMp3Links() {
   setStatus(`Created ${links.length} MP3 link${links.length === 1 ? '' : 's'}.`);
 }
 
+async function downloadSingleMp3() {
+  if (getSingleMp3Mode(SINGLE_MP3_WORKER_URL) !== 'worker') {
+    setStatus('Single MP3 needs a free Cloudflare Worker: deploy cloudflare-worker/ (see README), then set SINGLE_MP3_WORKER_URL in src/config.mjs. Showing multi-part links instead.');
+    renderMp3Links();
+    return;
+  }
+
+  const request = buildSingleMp3Request(textInput.value, { workerUrl: SINGLE_MP3_WORKER_URL });
+  if (!request) {
+    setStatus('Please enter text before creating an MP3.');
+    return;
+  }
+
+  singleMp3Button.disabled = true;
+  setStatus('Creating a single MP3 on the worker...');
+
+  try {
+    const response = await fetch(request.url, {
+      method: request.method,
+      headers: request.headers,
+      body: request.body,
+    });
+    if (!response.ok) {
+      throw new Error(`worker responded with ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = request.filename;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(objectUrl);
+    setStatus('Single MP3 download started.');
+  } catch (error) {
+    setStatus(`Single MP3 failed (${error.message || error}). You can still use Create Google MP3 Download Link.`);
+  } finally {
+    singleMp3Button.disabled = false;
+  }
+}
+
 ocrButton.addEventListener('click', runOcr);
 cleanButton.addEventListener('click', () => {
   textInput.value = cleanKoreanText(textInput.value);
@@ -293,8 +462,10 @@ stopButton.addEventListener('click', stop);
 progressBar.addEventListener('input', () => setProgress(progressBar.value, 'Seek position'));
 progressBar.addEventListener('change', seekPlayback);
 mp3Button.addEventListener('click', renderMp3Links);
+singleMp3Button.addEventListener('click', downloadSingleMp3);
 rateInput.addEventListener('input', () => { rateValue.value = Number(rateInput.value).toFixed(1); });
 pitchInput.addEventListener('input', () => { pitchValue.value = Number(pitchInput.value).toFixed(1); });
+linePauseInput.addEventListener('input', () => { linePauseValue.value = Number(linePauseInput.value).toFixed(1); });
 
 refreshVoices();
 if ('speechSynthesis' in window) {

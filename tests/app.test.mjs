@@ -15,7 +15,14 @@ import {
   calculatePlaybackProgress,
   getPlayableVoiceOptions,
   getTextFromProgress,
+  splitTextIntoChunks,
+  getSingleMp3Mode,
+  buildSingleMp3Request,
+  splitTextIntoLines,
+  clampLinePauseMs,
+  getRemainingLinesFromProgress,
 } from '../src/app-logic.mjs';
+import { SINGLE_MP3_WORKER_URL } from '../src/config.mjs';
 
 test('cleanKoreanText normalizes OCR whitespace while preserving Korean punctuation', () => {
   const raw = '  안녕\n\n하세요   세계 !  \n오늘은   좋은 날입니다.  ';
@@ -90,6 +97,98 @@ test('getTextFromProgress returns remaining text for an estimated seek position'
   assert.equal(getTextFromProgress(text, 0), text);
   assert.equal(getTextFromProgress(text, 50), '바사아자차');
   assert.equal(getTextFromProgress(text, 100), '차');
+});
+
+test('splitTextIntoChunks keeps chunks within maxChars and preserves all text', () => {
+  const text = '안녕하세요. 좋은 아침입니다. 오늘은 눈이 내립니다. '.repeat(10);
+  const chunks = splitTextIntoChunks(text, 60);
+
+  assert.ok(chunks.length > 1);
+  for (const chunk of chunks) {
+    assert.ok(chunk.length <= 60);
+  }
+  assert.equal(chunks.join(' '), cleanKoreanText(text));
+});
+
+test('splitTextIntoChunks returns empty array for blank input', () => {
+  assert.deepEqual(splitTextIntoChunks('   ', 100), []);
+});
+
+test('getSingleMp3Mode uses worker only when a worker URL is configured', () => {
+  assert.equal(getSingleMp3Mode(''), 'links');
+  assert.equal(getSingleMp3Mode('   '), 'links');
+  assert.equal(getSingleMp3Mode(undefined), 'links');
+  assert.equal(getSingleMp3Mode('not-a-url'), 'links');
+  assert.equal(getSingleMp3Mode('https://tts.example.workers.dev'), 'worker');
+});
+
+test('buildSingleMp3Request builds a JSON POST for the worker with cleaned text', () => {
+  const request = buildSingleMp3Request('  안녕하세요   세계 ! ', {
+    workerUrl: 'https://tts.example.workers.dev',
+  });
+
+  assert.deepEqual(request, {
+    url: 'https://tts.example.workers.dev',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: '안녕하세요 세계!', lang: 'ko' }),
+    filename: 'korean-voice.mp3',
+  });
+});
+
+test('buildSingleMp3Request returns null without text or worker URL', () => {
+  assert.equal(buildSingleMp3Request('', { workerUrl: 'https://tts.example.workers.dev' }), null);
+  assert.equal(buildSingleMp3Request('안녕하세요', { workerUrl: '' }), null);
+});
+
+test('splitTextIntoLines splits on newlines, cleans each line, and skips blank lines', () => {
+  const raw = '  첫째 줄입니다.  \n\n둘째   줄입니다 !\n   \n셋째 줄입니다.';
+  assert.deepEqual(splitTextIntoLines(raw), [
+    '첫째 줄입니다.',
+    '둘째 줄입니다!',
+    '셋째 줄입니다.',
+  ]);
+});
+
+test('splitTextIntoLines handles single-line and blank input', () => {
+  assert.deepEqual(splitTextIntoLines('안녕하세요.'), ['안녕하세요.']);
+  assert.deepEqual(splitTextIntoLines('   \n  \n'), []);
+  assert.deepEqual(splitTextIntoLines(''), []);
+});
+
+test('clampLinePauseMs clamps to a sane range and defaults to 700ms', () => {
+  assert.equal(clampLinePauseMs(700), 700);
+  assert.equal(clampLinePauseMs('1500'), 1500);
+  assert.equal(clampLinePauseMs(-100), 0);
+  assert.equal(clampLinePauseMs(99999), 3000);
+  assert.equal(clampLinePauseMs('abc'), 700);
+  assert.equal(clampLinePauseMs(undefined), 700);
+});
+
+test('getRemainingLinesFromProgress returns remaining lines for a seek position', () => {
+  const text = '가나다라\n마바사아\n자차카타';
+  assert.deepEqual(getRemainingLinesFromProgress(text, 0), ['가나다라', '마바사아', '자차카타']);
+  assert.deepEqual(getRemainingLinesFromProgress(text, 50), ['사아', '자차카타']);
+  assert.deepEqual(getRemainingLinesFromProgress(text, 100), ['타']);
+  assert.deepEqual(getRemainingLinesFromProgress('', 50), []);
+});
+
+test('config exposes an empty single MP3 worker URL by default', () => {
+  assert.equal(typeof SINGLE_MP3_WORKER_URL, 'string');
+});
+
+test('static UI includes the Download Single MP3 button', () => {
+  const html = readFileSync(join(projectRoot, 'index.html'), 'utf8');
+  assert.match(html, /id="singleMp3Button"/);
+  assert.match(html, /Download Single MP3/);
+});
+
+test('static UI includes the line pause control with a 0.7s default', () => {
+  const html = readFileSync(join(projectRoot, 'index.html'), 'utf8');
+  assert.match(html, /id="linePauseInput"/);
+  assert.match(html, /id="linePauseValue"/);
+  assert.match(html, /Line pause/);
+  assert.match(html, /id="linePauseInput"[^>]*value="0.7"/);
 });
 
 test('static UI includes winter Pax and Polly visual theme hooks', () => {

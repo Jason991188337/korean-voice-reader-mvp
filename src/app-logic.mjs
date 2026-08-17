@@ -82,7 +82,7 @@ export function buildSpeechUtteranceConfig({ text, rate = 1, pitch = 1, voiceInd
   };
 }
 
-function splitTextIntoChunks(text, maxChars) {
+export function splitTextIntoChunks(text, maxChars = 180) {
   const normalized = cleanKoreanText(text);
   if (!normalized) return [];
 
@@ -126,6 +126,50 @@ export function buildGoogleTtsMp3Links(text, { maxChars = 180 } = {}) {
       url: `https://translate.google.com/translate_tts?${params.toString()}`,
     };
   });
+}
+
+export function getSingleMp3Mode(workerUrl = '') {
+  const trimmed = String(workerUrl || '').trim();
+  return /^https?:\/\//.test(trimmed) ? 'worker' : 'links';
+}
+
+export function buildSingleMp3Request(text, { workerUrl = '', lang = 'ko' } = {}) {
+  const cleaned = cleanKoreanText(text);
+  if (!cleaned || getSingleMp3Mode(workerUrl) !== 'worker') return null;
+
+  return {
+    url: String(workerUrl).trim(),
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: cleaned, lang }),
+    filename: 'korean-voice.mp3',
+  };
+}
+
+export function splitTextIntoLines(input = '') {
+  return String(input)
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((line) => cleanKoreanText(line))
+    .filter(Boolean);
+}
+
+export function clampLinePauseMs(value) {
+  return clampNumber(value, 0, 3000, 700);
+}
+
+export function getRemainingLinesFromProgress(text, progress) {
+  const lines = splitTextIntoLines(text);
+  if (lines.length === 0) return [];
+
+  const joined = lines.join('\n');
+  const safeProgress = Math.min(100, Math.max(0, Number(progress) || 0));
+  const index = Math.min(joined.length - 1, Math.floor((safeProgress / 100) * joined.length));
+  return joined
+    .slice(index)
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 export function estimateSpeechDurationMs(text, rate = 1) {

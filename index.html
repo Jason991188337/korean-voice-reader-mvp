@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..900;1,9..40,300..900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./src/styles.css?v=20260817-extra-voices" />
+    <link rel="stylesheet" href="./src/styles.css?v=20260817-single-mp3" />
   </head>
   <body>
     <div class="snowfield" aria-hidden="true">
@@ -94,13 +94,19 @@
             Pitch <output id="pitchValue">1.0</output>
             <input id="pitchInput" type="range" min="0" max="2" step="0.1" value="1" />
           </label>
+          <label>
+            Line pause (s) <output id="linePauseValue">0.7</output>
+            <input id="linePauseInput" type="range" min="0" max="3" step="0.1" value="0.7" />
+          </label>
         </div>
+        <p class="hint tiny">When the text has multiple lines, each line is read separately with a short pause between lines.</p>
 
         <div class="player-actions">
           <button id="speakButton" type="button">Speak</button>
           <button id="pauseButton" type="button">Pause / Resume</button>
           <button id="stopButton" type="button">Stop</button>
           <button id="mp3Button" type="button">Create Google MP3 Download Link</button>
+          <button id="singleMp3Button" type="button">Download Single MP3</button>
         </div>
         <div class="progress-panel" aria-label="Playback progress">
           <div class="progress-header">
@@ -127,6 +133,6 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script type="module" src="./src/main.mjs?v=20260817-extra-voices"></script>
+    <script type="module" src="./src/main.mjs?v=20260817-line-pause"></script>
   </body>
 </html>
