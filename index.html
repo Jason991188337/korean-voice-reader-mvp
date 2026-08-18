@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..900;1,9..40,300..900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./src/styles.css?v=20260817-single-mp3" />
+    <link rel="stylesheet" href="./src/styles.css?v=20260818-time-seek" />
   </head>
   <body>
     <div class="snowfield" aria-hidden="true">
@@ -111,10 +111,18 @@
         <div class="progress-panel" aria-label="Playback progress">
           <div class="progress-header">
             <span id="progressLabel">Playback progress</span>
+            <span id="estimatedTime">Estimated time 00:00 / 00:00</span>
             <span id="progressPercent">0%</span>
           </div>
           <input id="progressBar" class="playback-seek" type="range" min="0" max="100" step="1" value="0" aria-label="Playback seek bar" />
-          <p class="hint tiny">Drag the icy bar to jump to an estimated point in the text.</p>
+          <div class="time-seek">
+            <label for="timeSeekInput">Seek to estimated time (mm:ss)</label>
+            <div class="time-seek-row">
+              <input id="timeSeekInput" type="text" inputmode="numeric" placeholder="01:30" aria-label="Estimated time to seek to, as minutes and seconds" />
+              <button id="timeSeekButton" type="button">Seek to Time</button>
+            </div>
+          </div>
+          <p class="hint tiny">Drag the icy bar or enter a time to jump to an estimated point in the text. Times are estimates based on text length, speech rate, and line pauses.</p>
         </div>
         <div id="downloadLinks" class="download-links" aria-live="polite"></div>
       </section>
@@ -133,6 +141,6 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script type="module" src="./src/main.mjs?v=20260817-line-pause"></script>
+    <script type="module" src="./src/main.mjs?v=20260818-time-seek"></script>
   </body>
 </html>

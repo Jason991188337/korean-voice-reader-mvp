@@ -11,7 +11,11 @@ import {
   splitTextIntoLines,
   clampLinePauseMs,
   getRemainingLinesFromProgress,
-} from './app-logic.mjs?v=20260817-line-pause';
+  formatTimeMmSs,
+  parseTimeMmSs,
+  estimateTotalPlaybackDurationMs,
+  getProgressFromTimeMs,
+} from './app-logic.mjs?v=20260818-time-seek';
 import { SINGLE_MP3_WORKER_URL } from './config.mjs?v=20260817-single-mp3';
 
 const $ = (id) => document.getElementById(id);
@@ -38,6 +42,9 @@ const downloadLinks = $('downloadLinks');
 const progressBar = $('progressBar');
 const progressPercent = $('progressPercent');
 const progressLabel = $('progressLabel');
+const estimatedTime = $('estimatedTime');
+const timeSeekInput = $('timeSeekInput');
+const timeSeekButton = $('timeSeekButton');
 
 let allVoices = [];
 let playableVoiceOptions = [];
@@ -67,11 +74,26 @@ function setStatus(message) {
   ocrStatus.textContent = message;
 }
 
+function totalEstimatedDurationMs() {
+  if (playbackTimer || pausedAt) return playbackDurationMs;
+  return estimateTotalPlaybackDurationMs(playbackFullText || textInput.value, {
+    rate: rateInput.value,
+    linePauseMs: currentLinePauseMs(),
+  });
+}
+
+function updateEstimatedTime(percent) {
+  const totalMs = totalEstimatedDurationMs();
+  const currentMs = totalMs * (Math.min(100, Math.max(0, percent)) / 100);
+  estimatedTime.textContent = `Estimated time ${formatTimeMmSs(currentMs)} / ${formatTimeMmSs(totalMs)}`;
+}
+
 function setProgress(percent, label = 'Playback progress') {
   const safePercent = Math.min(100, Math.max(0, Math.round(percent)));
   progressBar.value = safePercent;
   progressPercent.textContent = `${safePercent}%`;
   progressLabel.textContent = label;
+  updateEstimatedTime(safePercent);
 }
 
 function stopProgressTimer(finalPercent = 0, label = 'Playback progress') {
@@ -376,6 +398,26 @@ function seekPlayback() {
   playSpeech(remainingText, targetProgress);
 }
 
+function seekToTime() {
+  const requestedMs = parseTimeMmSs(timeSeekInput.value);
+  if (requestedMs === null) {
+    setStatus('Enter a time as mm:ss, for example 01:30.');
+    return;
+  }
+
+  const totalMs = estimateTotalPlaybackDurationMs(playbackFullText || textInput.value, {
+    rate: rateInput.value,
+    linePauseMs: currentLinePauseMs(),
+  });
+  if (!totalMs) {
+    setStatus('Please enter text before seeking playback.');
+    return;
+  }
+
+  progressBar.value = getProgressFromTimeMs(requestedMs, totalMs);
+  seekPlayback();
+}
+
 function renderMp3Links() {
   const links = buildGoogleTtsMp3Links(textInput.value);
   downloadLinks.innerHTML = '';
@@ -461,12 +503,20 @@ pauseButton.addEventListener('click', pauseOrResume);
 stopButton.addEventListener('click', stop);
 progressBar.addEventListener('input', () => setProgress(progressBar.value, 'Seek position'));
 progressBar.addEventListener('change', seekPlayback);
+timeSeekButton.addEventListener('click', seekToTime);
+timeSeekInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') seekToTime();
+});
 mp3Button.addEventListener('click', renderMp3Links);
 singleMp3Button.addEventListener('click', downloadSingleMp3);
 rateInput.addEventListener('input', () => { rateValue.value = Number(rateInput.value).toFixed(1); });
 pitchInput.addEventListener('input', () => { pitchValue.value = Number(pitchInput.value).toFixed(1); });
 linePauseInput.addEventListener('input', () => { linePauseValue.value = Number(linePauseInput.value).toFixed(1); });
+textInput.addEventListener('input', () => updateEstimatedTime(progressBar.value));
+rateInput.addEventListener('input', () => updateEstimatedTime(progressBar.value));
+linePauseInput.addEventListener('input', () => updateEstimatedTime(progressBar.value));
 
+updateEstimatedTime(0);
 refreshVoices();
 if ('speechSynthesis' in window) {
   window.speechSynthesis.onvoiceschanged = refreshVoices;

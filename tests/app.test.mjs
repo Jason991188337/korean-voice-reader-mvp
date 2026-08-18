@@ -21,6 +21,10 @@ import {
   splitTextIntoLines,
   clampLinePauseMs,
   getRemainingLinesFromProgress,
+  formatTimeMmSs,
+  parseTimeMmSs,
+  estimateTotalPlaybackDurationMs,
+  getProgressFromTimeMs,
 } from '../src/app-logic.mjs';
 import { SINGLE_MP3_WORKER_URL } from '../src/config.mjs';
 
@@ -173,6 +177,58 @@ test('getRemainingLinesFromProgress returns remaining lines for a seek position'
   assert.deepEqual(getRemainingLinesFromProgress('', 50), []);
 });
 
+test('formatTimeMmSs formats milliseconds as zero-padded mm:ss', () => {
+  assert.equal(formatTimeMmSs(0), '00:00');
+  assert.equal(formatTimeMmSs(7000), '00:07');
+  assert.equal(formatTimeMmSs(155000), '02:35');
+  assert.equal(formatTimeMmSs(59999), '00:59');
+  assert.equal(formatTimeMmSs(3600000), '60:00');
+  assert.equal(formatTimeMmSs(-500), '00:00');
+  assert.equal(formatTimeMmSs('abc'), '00:00');
+});
+
+test('parseTimeMmSs parses mm:ss into milliseconds and rejects invalid input', () => {
+  assert.equal(parseTimeMmSs('02:35'), 155000);
+  assert.equal(parseTimeMmSs('2:35'), 155000);
+  assert.equal(parseTimeMmSs(' 0:07 '), 7000);
+  assert.equal(parseTimeMmSs('02:60'), null);
+  assert.equal(parseTimeMmSs('abc'), null);
+  assert.equal(parseTimeMmSs(''), null);
+  assert.equal(parseTimeMmSs('1:2:3'), null);
+  assert.equal(parseTimeMmSs(undefined), null);
+});
+
+test('estimateTotalPlaybackDurationMs adds line pauses on top of speech duration', () => {
+  const singleLine = '안녕하세요'.repeat(20);
+  assert.equal(
+    estimateTotalPlaybackDurationMs(singleLine, { rate: 1, linePauseMs: 700 }),
+    estimateSpeechDurationMs(singleLine, 1)
+  );
+
+  const multiLine = '첫째 줄입니다\n둘째 줄입니다\n셋째 줄입니다';
+  const speechMs = estimateSpeechDurationMs(splitTextIntoLines(multiLine).join('\n'), 1);
+  assert.equal(
+    estimateTotalPlaybackDurationMs(multiLine, { rate: 1, linePauseMs: 700 }),
+    speechMs + 700 * 2
+  );
+
+  const fast = estimateTotalPlaybackDurationMs(multiLine, { rate: 2, linePauseMs: 700 });
+  const normal = estimateTotalPlaybackDurationMs(multiLine, { rate: 1, linePauseMs: 700 });
+  assert.ok(fast < normal);
+
+  assert.equal(estimateTotalPlaybackDurationMs('', {}), 0);
+  assert.equal(estimateTotalPlaybackDurationMs('   \n  '), 0);
+});
+
+test('getProgressFromTimeMs maps a requested time to clamped playback progress', () => {
+  assert.equal(getProgressFromTimeMs(0, 155000), 0);
+  assert.equal(getProgressFromTimeMs(77500, 155000), 50);
+  assert.equal(getProgressFromTimeMs(200000, 155000), 100);
+  assert.equal(getProgressFromTimeMs(-5, 155000), 0);
+  assert.equal(getProgressFromTimeMs(1000, 0), 0);
+  assert.equal(getProgressFromTimeMs('abc', 155000), 0);
+});
+
 test('config exposes an empty single MP3 worker URL by default', () => {
   assert.equal(typeof SINGLE_MP3_WORKER_URL, 'string');
 });
@@ -189,6 +245,15 @@ test('static UI includes the line pause control with a 0.7s default', () => {
   assert.match(html, /id="linePauseValue"/);
   assert.match(html, /Line pause/);
   assert.match(html, /id="linePauseInput"[^>]*value="0.7"/);
+});
+
+test('static UI includes the estimated time display and mm:ss time seek input', () => {
+  const html = readFileSync(join(projectRoot, 'index.html'), 'utf8');
+  assert.match(html, /id="estimatedTime"/);
+  assert.match(html, /Estimated time 00:00 \/ 00:00/);
+  assert.match(html, /id="timeSeekInput"/);
+  assert.match(html, /id="timeSeekButton"/);
+  assert.match(html, /Seek to Time/);
 });
 
 test('static UI includes winter Pax and Polly visual theme hooks', () => {

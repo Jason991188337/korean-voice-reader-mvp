@@ -191,6 +191,36 @@ export function calculatePlaybackProgress({ startedAt, now, durationMs }) {
   return Math.min(100, Math.max(0, percentage));
 }
 
+export function formatTimeMmSs(ms) {
+  const numeric = Number(ms);
+  const totalSeconds = Number.isFinite(numeric) && numeric > 0 ? Math.floor(numeric / 1000) : 0;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+export function parseTimeMmSs(input) {
+  const match = String(input ?? '').trim().match(/^(\d{1,3}):([0-5]\d)$/);
+  if (!match) return null;
+  return (Number(match[1]) * 60 + Number(match[2])) * 1000;
+}
+
+export function estimateTotalPlaybackDurationMs(text, { rate = 1, linePauseMs = 700 } = {}) {
+  const lines = splitTextIntoLines(text);
+  if (lines.length === 0) return 0;
+
+  const speechMs = estimateSpeechDurationMs(lines.join('\n'), rate);
+  const pauseMs = clampLinePauseMs(linePauseMs) * Math.max(0, lines.length - 1);
+  return speechMs + pauseMs;
+}
+
+export function getProgressFromTimeMs(timeMs, durationMs) {
+  if (!durationMs || durationMs <= 0) return 0;
+  const safeTime = Math.max(0, Number(timeMs) || 0);
+  const percentage = Math.round((safeTime / durationMs) * 100);
+  return Math.min(100, Math.max(0, percentage));
+}
+
 export function getTextFromProgress(text, progress) {
   const normalized = cleanKoreanText(text);
   if (!normalized) return '';

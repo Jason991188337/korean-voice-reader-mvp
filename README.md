@@ -7,6 +7,10 @@ A zero-server static web MVP that lets users:
 - Read the resulting Korean text aloud with the browser Web Speech API.
 - Keep Yuna and Google Korean voice options at the top, then add extra recommended Korean browser voices when available.
 - Display an estimated playback progress bar while speech is playing, with a draggable seek slider.
+- Show estimated playback timing as `Estimated time 00:00 / 02:35` and seek to an
+  estimated `mm:ss` time with a time input. Times are estimates derived from text
+  length, speech rate, and line pauses — the Web Speech API does not report real
+  playback position, so seeking restarts speech from the closest estimated text position.
 - Generate Google Korean TTS MP3 links for the current text.
 - Optionally download long text as ONE MP3 file through a free Cloudflare Worker.
 
