@@ -14,7 +14,7 @@ import {
   formatTimeMmSs,
   estimateTotalPlaybackDurationMs,
   planTimeSeek,
-} from './app-logic.mjs?v=20260818-time-seek-fix';
+} from './app-logic.mjs?v=20260818-time-seek-v3';
 import { SINGLE_MP3_WORKER_URL } from './config.mjs?v=20260817-single-mp3';
 
 const $ = (id) => document.getElementById(id);
@@ -57,6 +57,11 @@ let lineQueue = [];
 let linePauseTimer = null;
 let resumeNextLine = false;
 let speakNextLineRef = null;
+// Incremented whenever playback is (re)started, seeked, or stopped. Utterance
+// callbacks capture the value at creation; speechSynthesis.cancel() fires
+// events asynchronously (Chrome: error 'interrupted', Safari: end), so stale
+// callbacks from a cancelled utterance must not touch the UI or the queue.
+let playbackSession = 0;
 
 function clearLinePauseTimer() {
   if (linePauseTimer) {
@@ -88,11 +93,12 @@ function updateEstimatedTime(percent) {
 }
 
 function setProgress(percent, label = 'Playback progress') {
-  const safePercent = Math.min(100, Math.max(0, Math.round(percent)));
-  progressBar.value = safePercent;
-  progressPercent.textContent = `${safePercent}%`;
+  const safePercent = Math.min(100, Math.max(0, Number(percent) || 0));
+  const precisePercent = Math.round(safePercent * 100) / 100;
+  progressBar.value = String(precisePercent);
+  progressPercent.textContent = `${Math.round(precisePercent)}%`;
   progressLabel.textContent = label;
-  updateEstimatedTime(safePercent);
+  updateEstimatedTime(precisePercent);
 }
 
 function stopProgressTimer(finalPercent = 0, label = 'Playback progress') {
@@ -220,6 +226,7 @@ function playSpeech(textToSpeak, initialProgress = 0) {
   }
 
   window.speechSynthesis.cancel();
+  const session = ++playbackSession;
   const utterance = new SpeechSynthesisUtterance(config.text);
   utterance.lang = config.lang;
   utterance.rate = config.rate;
@@ -230,16 +237,20 @@ function playSpeech(textToSpeak, initialProgress = 0) {
   }
 
   utterance.onstart = () => {
+    if (session !== playbackSession) return;
     startProgressTimer(playbackFullText || config.text, config.rate, initialProgress);
     const selected = voiceSelect.selectedOptions[0]?.textContent || 'selected Korean voice';
     setStatus(`Playing with ${selected}...`);
   };
   utterance.onend = () => {
+    if (session !== playbackSession) return;
     isPaused = false;
     stopProgressTimer(100, 'Playback complete');
     setStatus('Playback complete.');
   };
   utterance.onerror = (event) => {
+    if (session !== playbackSession) return;
+    if (event.error === 'interrupted' || event.error === 'canceled') return;
     stopProgressTimer(0, 'Playback error');
     setStatus(`Speech playback error: ${event.error || 'unknown error'}`);
   };
@@ -251,6 +262,7 @@ function playSpeech(textToSpeak, initialProgress = 0) {
 function playLineSequence(lines, initialProgress = 0) {
   clearLinePauseTimer();
   window.speechSynthesis.cancel();
+  const session = ++playbackSession;
   resumeNextLine = false;
   isPaused = false;
   lineQueue = lines.slice();
@@ -259,6 +271,7 @@ function playLineSequence(lines, initialProgress = 0) {
   let started = false;
 
   const speakNextLine = () => {
+    if (session !== playbackSession) return;
     linePauseTimer = null;
     const line = lineQueue.shift();
     if (!line) return;
@@ -279,6 +292,7 @@ function playLineSequence(lines, initialProgress = 0) {
     }
 
     utterance.onstart = () => {
+      if (session !== playbackSession) return;
       if (!started) {
         started = true;
         startProgressTimer(playbackFullText, config.rate, initialProgress, totalPauseMs);
@@ -287,6 +301,7 @@ function playLineSequence(lines, initialProgress = 0) {
       }
     };
     utterance.onend = () => {
+      if (session !== playbackSession) return;
       if (lineQueue.length === 0) {
         isPaused = false;
         stopProgressTimer(100, 'Playback complete');
@@ -300,6 +315,7 @@ function playLineSequence(lines, initialProgress = 0) {
       linePauseTimer = window.setTimeout(speakNextLine, pauseMs);
     };
     utterance.onerror = (event) => {
+      if (session !== playbackSession) return;
       if (event.error === 'interrupted' || event.error === 'canceled') return;
       clearLinePauseTimer();
       lineQueue = [];
@@ -363,6 +379,7 @@ function stop() {
   clearLinePauseTimer();
   lineQueue = [];
   resumeNextLine = false;
+  playbackSession += 1;
   window.speechSynthesis.cancel();
   isPaused = false;
   pausedAt = 0;
@@ -372,7 +389,9 @@ function stop() {
 
 function seekPlayback() {
   const targetProgress = Number(progressBar.value);
-  setProgress(targetProgress, 'Seek position');
+  // Clear any running progress interval right away so it cannot keep
+  // overwriting the seek position while the new utterance is still starting.
+  stopProgressTimer(targetProgress, 'Seek position');
 
   const lines = splitTextIntoLines(playbackFullText || textInput.value);
   if (lines.length === 0) {
@@ -383,8 +402,12 @@ function seekPlayback() {
   if (!('speechSynthesis' in window)) return;
   playbackFullText = lines.join('\n');
   clearLinePauseTimer();
+  playbackSession += 1;
+  // Chrome can leave the engine stuck if cancel() is called while paused.
+  if (isPaused) window.speechSynthesis.resume();
   window.speechSynthesis.cancel();
   isPaused = false;
+  resumeNextLine = false;
   pausedAt = 0;
 
   if (lines.length > 1) {
@@ -414,6 +437,9 @@ function seekToTime() {
     : `Seeking to estimated time ${plan.label}.`);
   progressBar.value = plan.progress;
   seekPlayback();
+  // Show the exact requested/clamped time; the slider percent is rounded and
+  // can otherwise display a time a second or two off the typed value.
+  estimatedTime.textContent = `Estimated time ${plan.label} / ${formatTimeMmSs(plan.totalMs)}`;
 }
 
 function renderMp3Links() {

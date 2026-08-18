@@ -230,18 +230,22 @@ test('getProgressFromTimeMs maps a requested time to clamped playback progress',
   assert.equal(getProgressFromTimeMs('abc', 155000), 0);
 });
 
+test('getProgressFromTimeMs keeps decimal precision for short estimated durations', () => {
+  assert.equal(getProgressFromTimeMs(2000, 7000), 28.57);
+});
+
 test('planTimeSeek maps a valid typed m:ss or mm:ss time to playback progress', () => {
   assert.deepEqual(planTimeSeek('1:30', 180000), {
-    status: 'ok', targetMs: 90000, progress: 50, clamped: false, label: '01:30',
+    status: 'ok', targetMs: 90000, totalMs: 180000, progress: 50, clamped: false, label: '01:30',
   });
   assert.deepEqual(planTimeSeek(' 02:35 ', 155000), {
-    status: 'ok', targetMs: 155000, progress: 100, clamped: false, label: '02:35',
+    status: 'ok', targetMs: 155000, totalMs: 155000, progress: 100, clamped: false, label: '02:35',
   });
 });
 
 test('planTimeSeek clamps a time beyond the estimated duration to the end', () => {
   assert.deepEqual(planTimeSeek('99:00', 155000), {
-    status: 'ok', targetMs: 155000, progress: 100, clamped: true, label: '02:35',
+    status: 'ok', targetMs: 155000, totalMs: 155000, progress: 100, clamped: true, label: '02:35',
   });
 });
 

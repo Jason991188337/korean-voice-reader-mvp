@@ -217,8 +217,9 @@ export function estimateTotalPlaybackDurationMs(text, { rate = 1, linePauseMs = 
 export function getProgressFromTimeMs(timeMs, durationMs) {
   if (!durationMs || durationMs <= 0) return 0;
   const safeTime = Math.max(0, Number(timeMs) || 0);
-  const percentage = Math.round((safeTime / durationMs) * 100);
-  return Math.min(100, Math.max(0, percentage));
+  const percentage = (safeTime / durationMs) * 100;
+  const clamped = Math.min(100, Math.max(0, percentage));
+  return Math.round(clamped * 100) / 100;
 }
 
 export function planTimeSeek(input, durationMs) {
@@ -233,6 +234,7 @@ export function planTimeSeek(input, durationMs) {
   return {
     status: 'ok',
     targetMs,
+    totalMs,
     progress: getProgressFromTimeMs(targetMs, totalMs),
     clamped,
     label: formatTimeMmSs(targetMs),
