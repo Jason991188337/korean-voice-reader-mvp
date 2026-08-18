@@ -221,6 +221,24 @@ export function getProgressFromTimeMs(timeMs, durationMs) {
   return Math.min(100, Math.max(0, percentage));
 }
 
+export function planTimeSeek(input, durationMs) {
+  const requestedMs = parseTimeMmSs(input);
+  if (requestedMs === null) return { status: 'invalid' };
+
+  const totalMs = Number(durationMs);
+  if (!Number.isFinite(totalMs) || totalMs <= 0) return { status: 'no-text' };
+
+  const clamped = requestedMs > totalMs;
+  const targetMs = clamped ? totalMs : requestedMs;
+  return {
+    status: 'ok',
+    targetMs,
+    progress: getProgressFromTimeMs(targetMs, totalMs),
+    clamped,
+    label: formatTimeMmSs(targetMs),
+  };
+}
+
 export function getTextFromProgress(text, progress) {
   const normalized = cleanKoreanText(text);
   if (!normalized) return '';

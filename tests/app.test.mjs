@@ -25,6 +25,7 @@ import {
   parseTimeMmSs,
   estimateTotalPlaybackDurationMs,
   getProgressFromTimeMs,
+  planTimeSeek,
 } from '../src/app-logic.mjs';
 import { SINGLE_MP3_WORKER_URL } from '../src/config.mjs';
 
@@ -227,6 +228,36 @@ test('getProgressFromTimeMs maps a requested time to clamped playback progress',
   assert.equal(getProgressFromTimeMs(-5, 155000), 0);
   assert.equal(getProgressFromTimeMs(1000, 0), 0);
   assert.equal(getProgressFromTimeMs('abc', 155000), 0);
+});
+
+test('planTimeSeek maps a valid typed m:ss or mm:ss time to playback progress', () => {
+  assert.deepEqual(planTimeSeek('1:30', 180000), {
+    status: 'ok', targetMs: 90000, progress: 50, clamped: false, label: '01:30',
+  });
+  assert.deepEqual(planTimeSeek(' 02:35 ', 155000), {
+    status: 'ok', targetMs: 155000, progress: 100, clamped: false, label: '02:35',
+  });
+});
+
+test('planTimeSeek clamps a time beyond the estimated duration to the end', () => {
+  assert.deepEqual(planTimeSeek('99:00', 155000), {
+    status: 'ok', targetMs: 155000, progress: 100, clamped: true, label: '02:35',
+  });
+});
+
+test('planTimeSeek rejects invalid input and missing text', () => {
+  assert.deepEqual(planTimeSeek('abc', 155000), { status: 'invalid' });
+  assert.deepEqual(planTimeSeek('1:60', 155000), { status: 'invalid' });
+  assert.deepEqual(planTimeSeek('', 155000), { status: 'invalid' });
+  assert.deepEqual(planTimeSeek(undefined, 155000), { status: 'invalid' });
+  assert.deepEqual(planTimeSeek('0:30', 0), { status: 'no-text' });
+  assert.deepEqual(planTimeSeek('0:30', undefined), { status: 'no-text' });
+});
+
+test('time seek wiring uses the displayed estimated total so typed times match the display', () => {
+  const mainSrc = readFileSync(join(projectRoot, 'src/main.mjs'), 'utf8');
+  assert.match(mainSrc, /planTimeSeek\(timeSeekInput\.value,\s*totalEstimatedDurationMs\(\)\)/);
+  assert.match(mainSrc, /const totalPauseMs = pauseMs \* Math\.max\(0, splitTextIntoLines\(playbackFullText\)\.length - 1\);/);
 });
 
 test('config exposes an empty single MP3 worker URL by default', () => {

@@ -12,10 +12,9 @@ import {
   clampLinePauseMs,
   getRemainingLinesFromProgress,
   formatTimeMmSs,
-  parseTimeMmSs,
   estimateTotalPlaybackDurationMs,
-  getProgressFromTimeMs,
-} from './app-logic.mjs?v=20260818-time-seek';
+  planTimeSeek,
+} from './app-logic.mjs?v=20260818-time-seek-fix';
 import { SINGLE_MP3_WORKER_URL } from './config.mjs?v=20260817-single-mp3';
 
 const $ = (id) => document.getElementById(id);
@@ -256,7 +255,7 @@ function playLineSequence(lines, initialProgress = 0) {
   isPaused = false;
   lineQueue = lines.slice();
   const pauseMs = currentLinePauseMs();
-  const totalPauseMs = pauseMs * Math.max(0, lines.length - 1);
+  const totalPauseMs = pauseMs * Math.max(0, splitTextIntoLines(playbackFullText).length - 1);
   let started = false;
 
   const speakNextLine = () => {
@@ -399,22 +398,21 @@ function seekPlayback() {
 }
 
 function seekToTime() {
-  const requestedMs = parseTimeMmSs(timeSeekInput.value);
-  if (requestedMs === null) {
-    setStatus('Enter a time as mm:ss, for example 01:30.');
+  const plan = planTimeSeek(timeSeekInput.value, totalEstimatedDurationMs());
+  if (plan.status === 'invalid') {
+    setStatus('Enter a time as mm:ss or m:ss, for example 01:30 or 1:05.');
     return;
   }
-
-  const totalMs = estimateTotalPlaybackDurationMs(playbackFullText || textInput.value, {
-    rate: rateInput.value,
-    linePauseMs: currentLinePauseMs(),
-  });
-  if (!totalMs) {
+  if (plan.status === 'no-text') {
     setStatus('Please enter text before seeking playback.');
     return;
   }
 
-  progressBar.value = getProgressFromTimeMs(requestedMs, totalMs);
+  timeSeekInput.value = plan.label;
+  setStatus(plan.clamped
+    ? `That time is past the estimated total. Seeking to the end at ${plan.label}.`
+    : `Seeking to estimated time ${plan.label}.`);
+  progressBar.value = plan.progress;
   seekPlayback();
 }
 
